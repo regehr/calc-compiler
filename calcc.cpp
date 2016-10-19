@@ -3,6 +3,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
@@ -13,7 +14,7 @@ using namespace llvm;
 using namespace std;
 
 static LLVMContext C;
-static IRBuilder<> Builder(C);
+static IRBuilder<NoFolder> Builder(C);
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 
 static int compile() {
