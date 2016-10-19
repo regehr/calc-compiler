@@ -1,7 +1,16 @@
 Skeleton for "calc" language compiler.
 
+build the compiler like this:
+
 mkdir build
 cd build
 cmake .. -DLLVM_DIR=$LLVM -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
-
 make
+
+run the compiler like this:
+
+./calcc input_file 2> out.ll
+
+run the generated code like this:
+
+clang ../driver.c out.ll -Wall -o calc
