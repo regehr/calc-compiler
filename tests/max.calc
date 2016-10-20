@@ -1,0 +1,2 @@
+#Max of two given command line inputs
+(if (> a0 a1) a0 a1)
