@@ -1,0 +1,9 @@
+# finds the max-valued arg and the min-valued arg, then ensures max >= min... and always returns true.
+# expected result: true
+(if
+ (>=
+   (if (>= (if (>= a0 a1) a0 a1) a2) (if (>= a0 a1) a0 a1) a2)
+   (if (<= (if (<= a0 a1) a0 a1) a2) (if (<= a0 a1) a0 a1) a2))
+ true
+ false
+)
