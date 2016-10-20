@@ -1,0 +1,2 @@
+# Return min of two numbers
+(if (<= a0 a1) a0 a1)
