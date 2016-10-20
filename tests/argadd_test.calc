@@ -1,0 +1,2 @@
+# Expect result arg0 + arg1
+(+ arg0 arg1)
