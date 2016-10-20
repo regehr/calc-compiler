@@ -1,0 +1,6 @@
+#divides a0 by a1, finds the remainder and reconstructs and returns a0
+# checking for a1 == 0 too
+( (if ( = a1 0) ) 
+  a0
+  ( + ( * ( / a0 a1 ) a1 ) ( % a0 a1 ) )
+)
