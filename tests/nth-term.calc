@@ -1,0 +1,6 @@
+# Given the first term (a0), common difference between each term (a1),
+# and number n (a2) of Arithmetic progression series
+# Find the nth term of AP series
+# an = first_term + ((n - 1)*difference)
+
+(+ a0 (* a1 (- a2 1)))
