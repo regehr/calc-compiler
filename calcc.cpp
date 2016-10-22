@@ -30,7 +30,7 @@ static int compile() {
 
   Value *RetVal = ConstantInt::get(C, APInt(64, 0));
   Builder.CreateRet(RetVal);
-  assert(verifyModule(*M));
+  assert(!verifyModule(*M));
   M->dump();
   return 0;
 }
