@@ -27,9 +27,10 @@ sub test($) {
                 if defined $result;
 	    $result = $1;
 	}
-        if ($line =~ /ARGS (.*)$/) {
+        if ($line =~ /ARGS\s*([0-9\ \-]*)\s*$/) {
             die "BUGGY TESTCASE: more than one ARG line"
                 if defined $args;
+            $args = $1;
         }
     }
     close INF;
@@ -37,6 +38,9 @@ sub test($) {
       defined $result;
     die "BUGGY TESTCASE: cannot find ARGS line in '$f'" unless
       defined $args;
+    my @arglist = split / /, $args;
+    die "BUGGY TESTCASE: too many args in '$f'" if
+        scalar(@arglist) > 6;
     die "BUGGY TESTCASE: unexpected RESULT '$result'" unless
       ($result eq "ERROR" ||
        $result =~ /^-?[0-9]+$/);
@@ -58,7 +62,11 @@ sub test($) {
         print "COMPILER BUG: executable could not be generated\n";
         return 0;
     }
-    $res = runit("./a.out > output.txt");
+    my $argstr = "";
+    foreach my $arg (@arglist) {
+        $argstr .= "$arg ";
+    }
+    $res = runit("./a.out $argstr > output.txt");
     if ($res != 0) {
         print "COMPILER BUG: executable did not run successfully\n";
         return 0;
