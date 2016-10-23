@@ -1,2 +1,2 @@
-# expected result: -2000
+# RESULT -2000
 (+ -1000 -1000)

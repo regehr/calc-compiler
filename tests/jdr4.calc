@@ -1,2 +1,2 @@
-# expected result: ERROR
+# RESULT ERROR
 (+ - -1000 -1000)

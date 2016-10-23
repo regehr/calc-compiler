@@ -1,2 +1,2 @@
-# expected result: 1
+# RESULT 1
 (* (* 1 (* (* 1 1) 1)) 1)
