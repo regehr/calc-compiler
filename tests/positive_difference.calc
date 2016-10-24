@@ -1,3 +1,5 @@
+# ARGS -97085 -85461
+# RESULT 11624
 # if a0>a1 return a0-a1 else return a1-a0
 (
  (if true (> a0 a1) )
