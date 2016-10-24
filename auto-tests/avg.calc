@@ -1,4 +1,5 @@
-# expected result: average of first (min a0 5) of a1-a5.  Given a0=3, a1=4, a2=8, a3=12, then result=8.
+# ARGS 3 4 8 12
+# RESULT 8
 (if (<= a0 0)
     0
     (if (= a0 1)
