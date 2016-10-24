@@ -9,7 +9,7 @@ make
 
 run the compiler like this:
 
-./calcc input_file 2> out.ll
+./calcc < input_file 2> out.ll
 
 run the generated code like this:
 
