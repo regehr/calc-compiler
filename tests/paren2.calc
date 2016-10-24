@@ -1,2 +1,0 @@
-# Expected result: Error
-if (== a0 0) a1 a2
