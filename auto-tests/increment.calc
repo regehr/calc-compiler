@@ -1,0 +1,6 @@
+# ARGS 4
+# RESULT 5
+# Incrementing by 1
+(
+  (+ a0 1)
+)
