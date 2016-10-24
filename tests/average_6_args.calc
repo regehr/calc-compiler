@@ -1,3 +1,5 @@
+# ARGS 1823 9786 7654 6291 3856 4908
+# RESULT 5719
 # Returns the average of the 6 arguments
 # An advanced version will be discarding the non zero arguments or finding the average of the given arguments
 (/ ( + (+ (+ a0 a1) (+ a2 a3) ) (+ a4 a5) ) 6 )
