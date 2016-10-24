@@ -93,7 +93,6 @@ sub test($) {
     }
   done:
     print "TEST SUCCESSFUL\n";
-    print "\n";
     return 1;
 }
 
@@ -105,6 +104,7 @@ foreach my $f (@ARGV) {
     } else {
         $fail++;
     }
+    print "\n";
 }
 
 print "\n";
