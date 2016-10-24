@@ -7,6 +7,9 @@ if (!defined($CALCC)) {
     $CALCC = "../build/calcc";
 }
 
+die "cannot find compiler!" unless
+  -e $CALCC;
+
 sub runit ($) {
     (my $cmd) = @_;
     system "$cmd";
