@@ -1,6 +1,6 @@
 # adapted a bit from http://llvm.org/docs/CMake.html#embedding-llvm-in-your-project
 
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.2)
 project(IntervalBitwise)
 
 find_package(LLVM REQUIRED CONFIG)
@@ -24,7 +24,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/auto-tests
         )
 
 add_custom_target(check-all
-        COMMAND ${CMAKE_COMMAND} -E env CALCC=${CMAKE_BINARY_DIR}/calcc ./run_tests.pl *.calc
+        COMMAND ${CMAKE_COMMAND} -E env CALCC=${CMAKE_BINARY_DIR}/calcc PATH=${LLVM_TOOLS_BINARY_DIR}:$ENV{PATH} ./run_tests.pl *.calc
         DEPENDS calcc ${CMAKE_BINARY_DIR}/auto-tests
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/auto-tests
         )
