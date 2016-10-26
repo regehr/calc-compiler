@@ -22,9 +22,12 @@ target_link_libraries(calcc ${llvm_libs})
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/auto-tests
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/auto-tests ${CMAKE_BINARY_DIR}/auto-tests
         )
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/driver.c
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/driver.c ${CMAKE_BINARY_DIR}
+        )
 
 add_custom_target(check-all
-        COMMAND ${CMAKE_COMMAND} -E env CALCC=${CMAKE_BINARY_DIR}/calcc PATH=${LLVM_TOOLS_BINARY_DIR}:$ENV{PATH} ./run_tests.pl *.calc
-        DEPENDS calcc ${CMAKE_BINARY_DIR}/auto-tests
+        COMMAND ${CMAKE_COMMAND} -E env CALCC=${CMAKE_BINARY_DIR}/calcc PATH=${LLVM_TOOLS_BINARY_DIR}:$ENV{PATH} ${CMAKE_SOURCE_DIR}/run_tests.pl *.calc
+        DEPENDS calcc ${CMAKE_BINARY_DIR}/auto-tests ${CMAKE_BINARY_DIR}/driver.c
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/auto-tests
         )
