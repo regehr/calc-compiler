@@ -4,7 +4,7 @@ use strict;
 
 my $CALCC = $ENV{"CALCC"};
 if (!defined($CALCC)) {
-    $CALCC = "../build/calcc";
+    $CALCC = "build/calcc";
 }
 
 die "cannot find compiler!" unless
@@ -61,7 +61,7 @@ sub test($) {
         print "COMPILER BUG: failed to correctly give exit code 0\n";
         return 0;
     }
-    runit("clang out.ll ../driver.c");
+    runit("clang out.ll driver.c");
     if (!(-f "a.out")) {
         print "COMPILER BUG: executable could not be generated\n";
         return 0;
