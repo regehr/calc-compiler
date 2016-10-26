@@ -1,3 +1,9 @@
+/*
+ *	References:
+ *	[1] LLVM Cookbook - Mayur Pandey, Suyog Sarda
+ *	[2] LLVM tutorial - http://llvm.org/docs/tutorial/index.html
+ */
+
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
@@ -16,7 +22,7 @@ using namespace std;
 static LLVMContext C;
 static IRBuilder<NoFolder> Builder(C);
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
-
+static std::map<std::string, Value*> ArgValues;
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -25,15 +31,11 @@ static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 
 enum Token {
   tok_eof = -1,
-
   tok_if = -2,
-
   tok_arg = -3,
   tok_number = -4,
-
   tok_lparan = -5,
   tok_rparan = -6,
-
   tok_comment = -7, // we don't need a token!
   tok_true = -8,
   tok_false = -9,
@@ -53,10 +55,10 @@ enum Token {
 static std::string IdentifierStr; // Filled in if tok_identifier
 static double NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
-
+static std::string match;
 /// gettok - Return the next token from standard input.
 static int gettok() {
-  static int LastChar = ' ';
+  static char LastChar = ' ';
 
   // Skip any whitespace.
   while (isspace(LastChar))
@@ -99,66 +101,51 @@ static int gettok() {
     if (LastChar != EOF)
       return gettok();
   }
-	if(last_char=='(') return tok_lparan;
-	if(last_char==')') return tok_rparan;
-	if(last_char=='+') return tok_add;
-	if(last_char=='-'){ 
-		last_char= getchar();
-		if(last_char==' ') return tok_sub;
-		if(isdigit(last_char)){
-			std::string neg=last_char;
-			while(isdigit(last_char=getchar())){
-				neg+= last_char;
+	if(LastChar=='(') return tok_lparan;
+	if(LastChar==')') return tok_rparan;
+	if(LastChar=='+') return tok_add;
+	if(LastChar=='-'){ 
+		LastChar= getchar();
+		if(LastChar==' ') return tok_sub;
+		if(isdigit(LastChar)){
+			std::string neg;
+			neg+=LastChar;
+			while(isdigit(LastChar=getchar())){
+				neg+= LastChar;
 			}
 			NumVal = -1*strtod(neg.c_str(),nullptr);
 			return tok_number;
 		}
 	}
-	if(last_char=='*') return tok_mul;
-	if(last_char=='/') return tok_div;
-	if(last_char=='%') return tok_mod;
-	if(last_char=='>'){
-		match=last_char;
-		last_char=getchar();
-		match+=last_char;
-		if(match==">="){
-			match=""; //reset
+	if(LastChar=='*') return tok_mul;
+	if(LastChar=='/') return tok_div;
+	if(LastChar=='%') return tok_mod;
+	if(LastChar=='>'){
+		LastChar=getchar();
+		if(LastChar=='='){
 		   	return tok_gte;
 		}
-		match="";
 		return tok_gt;
 	}
-	if(last_char=='<'){ 
-		match=last_char;
-		last_char=getchar();
-		match+=last_char;
-		if(match=="<="){
-			match="";
+	if(LastChar=='<'){ 
+		LastChar=getchar();
+		if(LastChar=='='){
 			return tok_lte;
 		}
-		match="";
 		return tok_lt;
 	}
-	if(last_char=='='){
-		match=last_char;
-		last_char=getchar();
-		match+= last_char;
-		if(match=="=="){
-			match="";
+	if(LastChar=='='){
+		LastChar=getchar();
+		if(LastChar=='='){
 			return tok_eq;
 		}
-		match = "";
 		cout << "SCANNER ERROR NEAR =" << endl;
 	}
-	if(last_char == '!'){
-		match= last_char;
-		last_char = getchar();
-		match+= last_char;
-		if(match=="!="){
-			match = "";
+	if(LastChar == '!'){
+		LastChar = getchar();
+		if(LastChar == '='){
 			return tok_neq;
 		}
-		match = "";
 		cout << "SCANNER ERROR NEAR =" << endl;
 	}
   // Check for end of file.  Don't eat the EOF.
@@ -205,7 +192,7 @@ class ConditionConstExprAST : public ExprAST{
 		ConditionConstExprAST(unsigned int val) : val(val){}
 		Value *codegen() override;
 
-}
+};
 /// BinaryExprAST - Expression class for a binary operator. eg. + 1 1
 class BinaryExprAST : public ExprAST {
   int Op; //hold the token
@@ -220,12 +207,12 @@ public:
 
 /// ConditionExprAST - Expression class for a conditional operator, i.e., 'if'
 class ConditionExprAST : public ExprAST{
-	std::unique_prt<ExprAST> Branch, Then,Else;
+	std::unique_ptr<ExprAST> Branch, Then,Else;
 
 public:
-	ConditionExprAST(std::unique_prt<ExprAST> Branch, std::unique_prt<ExprAST> Then,std::unique_prt<ExprAST> Else):Branch(std::move(Branch)), Then(std::move(Then)), Else(std::move(Else)){}
+	ConditionExprAST(std::unique_ptr<ExprAST> Branch, std::unique_ptr<ExprAST> Then,std::unique_ptr<ExprAST> Else):Branch(std::move(Branch)), Then(std::move(Then)), Else(std::move(Else)){}
 	Value *codegen() override;
-}
+};
 
 } // end anonymous namespace
 
@@ -251,7 +238,6 @@ static std::unique_ptr<ExprAST> ParseExpression();
 /// numberexpr ::= number
 static std::unique_ptr<ExprAST> ParseNumberExpr() {
   auto Result = llvm::make_unique<NumberExprAST>(NumVal);
-  getNextToken(); // consume the number
   return std::move(Result);
 }
 
@@ -356,7 +342,7 @@ Value *NumberExprAST::codegen() {
 }
 
 Value *ArgExprAST::codegen(){
-	Value *V = ArgName;
+	Value *V = ArgValues[ArgName];
 	if(!V){
 		return nullptr;
 	}
@@ -364,43 +350,43 @@ Value *ArgExprAST::codegen(){
 }
 
 Value *BinaryExprAST::codegen() {
-  Value *First = First->codegen();
-  Value *Second = Second->codegen();
+  Value *first = First->codegen();
+  Value *second = Second->codegen();
   if (!First || !Second)
     return nullptr;
-	switch(op){
+	switch(Op){
 	case tok_add:
-		return Builder.CreateAdd(First, Second, "addtmp");
+		return Builder.CreateAdd(first, second, "addtmp");
    case tok_sub:
-    return Builder.CreateSub(First, Second, "subtmp");
+    return Builder.CreateSub(first, second, "subtmp");
    case tok_mul:
-    return Builder.CreateMul(First, Second, "multmp");
+    return Builder.CreateMul(first, second, "multmp");
   case tok_div:
-	return Builder.CreateDiv(First,Second,"divtmp");
+	return Builder.CreateUDiv(first,second,"divtmp");
   case tok_mod:
-	return Builder.CreateURem(First, Second, "modtmp");
+	return Builder.CreateURem(first, second, "modtmp");
   case tok_gt:
-	return Builder.CreateFCmpUGT(First,Second,"gttmp");
+	return Builder.CreateFCmpUGT(first,second,"gttmp");
   case tok_gte:
-	return Builder.CreateFCmpUGE(First,Second,"gtetmp");
+	return Builder.CreateFCmpUGE(first,second,"gtetmp");
   case tok_lt:
-	return Builder.CreateFCmpLGT(First,Second,"lttmp");
+	return Builder.CreateFCmpULT(first,second,"lttmp");
   case tok_lte:
-	return Builder.CreateFCmpLGE(First,Second,"ltetmp");
+	return Builder.CreateFCmpULE(first,second,"ltetmp");
   case tok_eq:
-	return Builder.CreateFCmpUEQ(First,Second,"eqtmp");
+	return Builder.CreateFCmpUEQ(first,second,"eqtmp");
   case tok_neq:
-	return Builder.CreateFCmpUNE(First,Second,"neqtmp");
+	return Builder.CreateFCmpUNE(first,second,"neqtmp");
  }
     return LogErrorV("invalid binary operator");
 }
 
 Value *ConditionExprAST::codegen(){
 	Value *Br = Branch->codegen();
-	if(!BranchRes) return nullptr;
+	if(!Br) return nullptr;
 Br = Builder.CreateFCmpONE(Br,ConstantInt::get(C,APInt(1,0)),""); //i1
 
-	Function *f = Builder.GetInsterBlock()->getParent();
+	Function *f = Builder.GetInsertBlock()->getParent();
 
 	BasicBlock *ThenBB = BasicBlock::Create(C,"then",f);
 	BasicBlock *ElseBB = BasicBlock::Create(C,"else");
@@ -436,8 +422,6 @@ Br = Builder.CreateFCmpONE(Br,ConstantInt::get(C,APInt(1,0)),""); //i1
 }
 
 
-
-
 static int compile() {
   M->setTargetTriple(llvm::sys::getProcessTriple());
   std::vector<Type *> SixInts(6, Type::getInt64Ty(C));
@@ -446,7 +430,13 @@ static int compile() {
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
 
-  // codegen
+  while(true){
+	getNextToken();
+	if(CurTok == EOF) return 0;
+	auto V = ParseExpression();
+	if(!V) return 1;
+	Value *generated = V->codegen();
+  }
 
   Value *RetVal = ConstantInt::get(C, APInt(64, 0));
   Builder.CreateRet(RetVal);
