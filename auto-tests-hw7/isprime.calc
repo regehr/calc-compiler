@@ -1,0 +1,14 @@
+# ARGS 11
+# RESULT 1
+(seq
+	(set 2 m0)
+	(while (< m0 a0)
+		(seq 
+			(if (== (% a0 m0) 0) 0 ((set m0 (+ m0 1)))
+			) 
+			1
+		)
+	)
+)
+
+#return 1 if a0 is a prime, 0 otherwise
