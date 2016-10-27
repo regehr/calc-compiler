@@ -1,0 +1,12 @@
+# ARGS 100
+# RESULT 10000
+(seq
+  (while
+    (!= m0 a0)
+    (seq (while
+           (!= m1 a0)
+           (seq (set (+ 1 m2) m2)
+                (set (+ 1 m1) m1)))
+         (seq (set (+ 1 m0) m0) (set 0 m1))))
+  m2
+)

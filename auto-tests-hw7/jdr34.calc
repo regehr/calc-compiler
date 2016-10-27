@@ -1,0 +1,4 @@
+# ARGS
+# RESULT 1
+(seq (set 1 m0) m0)
+

@@ -23,6 +23,7 @@ static LLVMContext C;
 static IRBuilder<NoFolder> Builder(C);
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 static std::map<std::string, Value*> ArgValues;
+
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -152,6 +153,7 @@ static int gettok() {
   if (LastChar == EOF)
     return tok_eof;
   // Otherwise, just return the character as its ascii value.
+  cout << "Current Token:" << (char)LastChar << endl;
   int ThisChar = LastChar;
   LastChar = getchar();
   return ThisChar;
@@ -243,9 +245,7 @@ static std::unique_ptr<ExprAST> ParseNumberExpr() {
 
 /// numberexpr ::= Arg
 static std::unique_ptr<ExprAST> ParseArgExpr(){
-	auto Result = llvm::make_unique<ArgExprAST>(ArgName);
-	getNextToken();
-	return std::move(Result);
+	return llvm::make_unique<ArgExprAST>(ArgName);
 }
 /// branch ::= true | false
 static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
@@ -253,13 +253,11 @@ static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
 	unsigned int val;
 	if(CurTok == tok_true){
 	   	val =1;
-		return llvm::make_unique<ConditionConstExprAST>(val);
 	}
 	if(CurTok == tok_false){
 	   	val = 0;
-		return llvm::make_unique<ConditionConstExprAST>(val);
 	}
-	return LogError("Conditional Constant Parsing Error");
+		return llvm::make_unique<ConditionConstExprAST>(val);
 }
  
 // expression ::= '(' expression ')'
@@ -268,7 +266,8 @@ static std::unique_ptr<ExprAST> ParseParenExpr() {
   auto V = ParseExpression();
   if (!V)
     return nullptr;
-  getNextToken(); // eat ).
+  getNextToken();
+  if(CurTok != tok_rparan) return LogError("Expected ')'");
   return V;
 }
 
@@ -299,14 +298,11 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 	if(!second) LogError("Else Expression Parsing Error");
 
 	return llvm::make_unique<ConditionExprAST>(std::move(condition),std::move(first),std::move(second));
-
 }
 
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
   switch (CurTok) {
-  default:
-    return LogError("unknown token when expecting an expression");
   case tok_arg:
 	return ParseArgExpr();
   case tok_number:
@@ -325,7 +321,15 @@ static std::unique_ptr<ExprAST> ParseExpression() {
   case tok_eq:
   case tok_neq:
 	return ParseBinExpr();	
-  }
+  case tok_true:
+		return ParseBranchConsExpr(); 
+case tok_false:
+		return ParseBranchConsExpr();
+case tok_if:
+		return ParseConditionExpr();
+  default:
+    return LogError("unknown token when expecting an expression");
+}
 }
 
 //===----------------------------------------------------------------------===//
@@ -421,6 +425,9 @@ Br = Builder.CreateFCmpONE(Br,ConstantInt::get(C,APInt(1,0)),""); //i1
 	return PN;
 }
 
+Value *ConditionConstExprAST::codegen(){
+	return ConstantInt::get(C,APInt(1,val)); // 1 bit value i1
+}
 
 static int compile() {
   M->setTargetTriple(llvm::sys::getProcessTriple());
@@ -445,4 +452,4 @@ static int compile() {
   return 0;
 }
 
-int main(void) { return compile(); }
+	int main(void) { return compile(); }

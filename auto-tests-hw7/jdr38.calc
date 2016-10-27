@@ -1,0 +1,3 @@
+# ARGS 10000
+# RESULT 30000
+(while (!= m0 a0) (seq (set (+ 1 m0) m0) (set (+ 3 m1) m1)))

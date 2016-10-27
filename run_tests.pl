@@ -18,6 +18,7 @@ sub runit ($) {
 
 sub test($) {
     (my $f) = @_;
+    system "rm -f a.out";
     print "================================================\n";
     print "running test '$f'\n";
     open INF, "<$f" or die "OOPS: cannot open '$f'";
@@ -60,7 +61,7 @@ sub test($) {
         print "COMPILER BUG: failed to correctly give exit code 0\n";
         return 0;
     }
-    runit("clang out.ll driver.c");
+    runit("clang out.ll ../driver.c");
     if (!(-f "a.out")) {
         print "COMPILER BUG: executable could not be generated\n";
         return 0;
