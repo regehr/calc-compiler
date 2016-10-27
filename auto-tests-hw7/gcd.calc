@@ -1,0 +1,19 @@
+#ARGS 81 153
+#RESULT 9
+(seq
+ (set a0 m0)
+ (seq
+  (set a1 m1)
+  (seq
+   (while (!= m0 m1)
+    (seq
+     (if (> m0 m1)
+      (seq (set (- m0 m1) m0)
+       (seq (set (- m1 m0) m1)))
+     )
+    )
+   )
+  )
+ )
+)
+#Finds GCD of two positive numbers
