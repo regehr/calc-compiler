@@ -1,0 +1,10 @@
+# Expect result 1
+(seq
+  (set m0 a0)
+  (seq
+    (while
+      (!= m0 1)
+      (if (== 0 (% m0 2))
+          (set m0 (/ m0 2))
+          (set m0 (+ (* 3 m0) 1))))
+  m0))
