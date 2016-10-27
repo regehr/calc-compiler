@@ -1,0 +1,3 @@
+# ARGS 3
+# RESULT 3
+(seq (set m0 a0) (+ m0 m1))
