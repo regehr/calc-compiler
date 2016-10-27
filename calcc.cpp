@@ -27,30 +27,28 @@ static std::map<std::string, Value*> ArgValues;
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
-// The lexer returns tokens [0-255] if it is an unknown character, otherwise one
-// of these for known things.
-
 enum Token {
-  tok_eof = -1,
-  tok_if = -2,
-  tok_arg = -3,
-  tok_number = -4,
-  tok_lparan = -5,
-  tok_rparan = -6,
-  tok_comment = -7, // we don't need a token!
-  tok_true = -8,
-  tok_false = -9,
-  tok_add = -10,
-  tok_sub = -11,
-  tok_mul = -12,
-  tok_div = -13,
-  tok_mod = -14,
-  tok_gt = -15,
-  tok_gte = -16,
-  tok_lt = -17,
-  tok_lte = -18,
-  tok_eq = -19,
-  tok_neq = -20
+  tok_eof,
+  tok_if,
+  tok_arg,
+  tok_number,
+  tok_lparan,
+  tok_rparan,
+  tok_comment , // we don't need a token!
+  tok_true,
+  tok_false,
+  tok_add,
+  tok_sub,
+  tok_mul,
+  tok_div,
+  tok_mod,
+  tok_gt,
+  tok_gte,
+  tok_lt,
+  tok_lte,
+  tok_eq,
+  tok_neq,
+  tok_unknown
 };
 
 static std::string IdentifierStr; // Filled in if tok_identifier
@@ -152,11 +150,11 @@ static int gettok() {
   // Check for end of file.  Don't eat the EOF.
   if (LastChar == EOF)
     return tok_eof;
-  // Otherwise, just return the character as its ascii value.
+  // Otherwise, return unknown token
   cout << "Current Token:" << (char)LastChar << endl;
   int ThisChar = LastChar;
   LastChar = getchar();
-  return ThisChar;
+  return tok_unknown;
 }
 
 //===----------------------------------------------------------------------===//
@@ -370,17 +368,17 @@ Value *BinaryExprAST::codegen() {
   case tok_mod:
 	return Builder.CreateURem(first, second, "modtmp");
   case tok_gt:
-	return Builder.CreateFCmpUGT(first,second,"gttmp");
+	return Builder.CreateICmpUGT(first,second,"gttmp");
   case tok_gte:
-	return Builder.CreateFCmpUGE(first,second,"gtetmp");
+	return Builder.CreateICmpUGE(first,second,"gtetmp");
   case tok_lt:
-	return Builder.CreateFCmpULT(first,second,"lttmp");
+	return Builder.CreateICmpULT(first,second,"lttmp");
   case tok_lte:
-	return Builder.CreateFCmpULE(first,second,"ltetmp");
+	return Builder.CreateICmpULE(first,second,"ltetmp");
   case tok_eq:
-	return Builder.CreateFCmpUEQ(first,second,"eqtmp");
+	return Builder.CreateICmpUEQ(first,second,"eqtmp");
   case tok_neq:
-	return Builder.CreateFCmpUNE(first,second,"neqtmp");
+	return Builder.CreateICmpUNE(first,second,"neqtmp");
  }
     return LogErrorV("invalid binary operator");
 }
