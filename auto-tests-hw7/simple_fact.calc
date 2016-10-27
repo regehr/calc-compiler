@@ -1,0 +1,8 @@
+#ARGS 5
+#RESULT 120
+(set 1 m1)
+(set a0 m0)
+(while (> m0 1)
+       (set (* m1 (set (- m0 1) m0) ) m1)
+)
+m1
