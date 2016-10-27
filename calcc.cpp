@@ -376,9 +376,9 @@ Value *BinaryExprAST::codegen() {
   case tok_lte:
 	return Builder.CreateICmpULE(first,second,"ltetmp");
   case tok_eq:
-	return Builder.CreateICmpUEQ(first,second,"eqtmp");
+	return Builder.CreateICmpEQ(first,second,"eqtmp");
   case tok_neq:
-	return Builder.CreateICmpUNE(first,second,"neqtmp");
+	return Builder.CreateICmpNE(first,second,"neqtmp");
  }
     return LogErrorV("invalid binary operator");
 }
@@ -386,7 +386,7 @@ Value *BinaryExprAST::codegen() {
 Value *ConditionExprAST::codegen(){
 	Value *Br = Branch->codegen();
 	if(!Br) return nullptr;
-Br = Builder.CreateFCmpONE(Br,ConstantInt::get(C,APInt(1,0)),""); //i1
+	Br = Builder.CreateICmpEQ(Br,ConstantInt::get(C,APInt(1,1)),""); //i1
 
 	Function *f = Builder.GetInsertBlock()->getParent();
 
@@ -395,7 +395,6 @@ Br = Builder.CreateFCmpONE(Br,ConstantInt::get(C,APInt(1,0)),""); //i1
 	BasicBlock *MergeBB = BasicBlock::Create(C,"");
 
 	Builder.CreateCondBr(Br, ThenBB, ElseBB);
-
 	Builder.SetInsertPoint(ThenBB);
 
 	Value *then_val = Then->codegen();
@@ -437,7 +436,7 @@ static int compile() {
 
   while(true){
 	getNextToken();
-	if(CurTok == EOF) return 0;
+	if(CurTok == EOF){cout<< "EOF reached"<<endl; break;}
 	auto V = ParseExpression();
 	if(!V) return 1;
 	Value *generated = V->codegen();
