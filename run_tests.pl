@@ -102,11 +102,13 @@ sub test($) {
 
 my $pass = 0;
 my $fail = 0;
+my @fails;
 foreach my $f (@ARGV) {
     if (test($f)) {
         $pass++;
     } else {
         $fail++;
+        push @fails, $f;
     }
     print "\n";
 }
@@ -114,4 +116,10 @@ foreach my $f (@ARGV) {
 print "\n";
 print "================================================\n";
 print "SUMMARY: $pass tests passed, $fail tests failed\n";
+if ($fail > 0) {
+    print "failing tests:\n";
+    foreach my $t (@fails) {
+        print "  $t\n";
+    }
+}
 print "================================================\n";

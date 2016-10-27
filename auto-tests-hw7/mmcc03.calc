@@ -1,7 +1,0 @@
-# ARGS 1
-# RESULT 8
-(seq
-	(seq (set m0 a1)
-		(while (< m0 8)
-			(set m0 (+ m0 1))))
-	m0)
