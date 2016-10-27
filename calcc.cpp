@@ -434,6 +434,14 @@ static int compile() {
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
 
+  // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
+  std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
+  int i=0;
+  for(auto &arg:F->args()){ //iterator args()
+	  ArgValues[names[i]] = &arg;
+		  i++;
+  }
+  
   while(true){
 	getNextToken();
 	if(CurTok == EOF){cout<< "EOF reached"<<endl; break;}
