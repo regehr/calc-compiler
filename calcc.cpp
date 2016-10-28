@@ -15,7 +15,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iostream>
-
+#include <stdio.h>
 using namespace llvm;
 using namespace std;
 
@@ -56,8 +56,8 @@ static double NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
+static char LastChar = ' ';
 static int gettok() {
-  static char LastChar = ' ';
 
   // Skip any whitespace.
   while (isspace(LastChar))
@@ -68,14 +68,25 @@ static int gettok() {
     while (isalnum((LastChar = getchar())))
       IdentifierStr += LastChar;
 
-    if (IdentifierStr == "if")
-      return tok_if;
-	if(IdentifierStr == "true")
-		return tok_true;
-	if(IdentifierStr=="false")
+    if (IdentifierStr == "if"){
+    //  cout << LastChar << endl;
+	  LastChar = getchar();
+		return tok_if;
+	}
+	if(IdentifierStr == "true"){
+	//	 cout << LastChar << endl;
+		  LastChar = getchar();
+	 	 return tok_true;
+	}
+	if(IdentifierStr=="false"){
+ cout << IdentifierStr << endl;
+	  LastChar = getchar();
 		return tok_false;
+	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
 	  ArgName = IdentifierStr;
+	//cout << IdentifierStr << endl;
+	  LastChar = getchar();
 		return tok_arg;
 	}
   }
@@ -86,8 +97,9 @@ static int gettok() {
       NumStr += LastChar;
       LastChar = getchar();
     } while (isdigit(LastChar));
-
+	//cout << NumStr << endl;
     NumVal = strtod(NumStr.c_str(), nullptr);
+	  //LastChar = getchar();
     return tok_number;
   }
 
@@ -95,47 +107,87 @@ static int gettok() {
     // Comment until end of line.
     do
       LastChar = getchar();
-    while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
+    while (LastChar != EOF || LastChar != '\n' || LastChar != '\r');
 
-    if (LastChar != EOF)
-      return gettok();
+    if (LastChar != EOF){
+      return tok_eof;
+	}
   }
-	if(LastChar=='(') return tok_lparan;
-	if(LastChar==')') return tok_rparan;
-	if(LastChar=='+') return tok_add;
+	if(LastChar=='('){
+	//cout << LastChar << endl;
+	LastChar = getchar();
+		return tok_lparan;
+	}
+	if(LastChar==')'){ 
+	//cout << LastChar << endl;
+	  LastChar = getchar();
+		return tok_rparan;
+	}
+	if(LastChar=='+'){
+	//cout << LastChar << endl;
+	  LastChar = getchar();
+	   	return tok_add;
+	}
 	if(LastChar=='-'){ 
 		LastChar= getchar();
-		if(LastChar==' ') return tok_sub;
-		if(isdigit(LastChar)){
+		if(LastChar==' '){ 
+	//cout << LastChar << endl;
+	  LastChar = getchar();
+			return tok_sub;
+		}
+		else if(isdigit(LastChar)){
 			std::string neg;
 			neg+=LastChar;
 			while(isdigit(LastChar=getchar())){
 				neg+= LastChar;
 			}
 			NumVal = -1*strtod(neg.c_str(),nullptr);
+	  //LastChar = getchar();
 			return tok_number;
 		}
 	}
-	if(LastChar=='*') return tok_mul;
-	if(LastChar=='/') return tok_div;
-	if(LastChar=='%') return tok_mod;
+	if(LastChar=='*'){
+	 //cout << LastChar << endl;
+	  LastChar = getchar();
+		return tok_mul;
+	}
+	if(LastChar=='/') {
+	// cout << LastChar << endl;
+	  LastChar = getchar();
+		return tok_div;
+	}
+	if(LastChar=='%'){
+	// cout << LastChar << endl;
+	  LastChar = getchar();
+	   	return tok_mod;
+	}
 	if(LastChar=='>'){
 		LastChar=getchar();
 		if(LastChar=='='){
+	// cout << LastChar << endl;
+	  LastChar = getchar();
 		   	return tok_gte;
 		}
+	// cout << LastChar << endl;
+	  LastChar = getchar();
 		return tok_gt;
 	}
 	if(LastChar=='<'){ 
 		LastChar=getchar();
 		if(LastChar=='='){
+	// cout << LastChar << endl;
+	  LastChar = getchar();
 			return tok_lte;
 		}
+	// cout << LastChar << endl;
+	  LastChar = getchar();
 		return tok_lt;
 	}
 	if(LastChar=='='){
 		LastChar=getchar();
 		if(LastChar=='='){
+	// cout << LastChar << endl;
+	  LastChar = getchar();
 			return tok_eq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -143,17 +195,20 @@ static int gettok() {
 	if(LastChar == '!'){
 		LastChar = getchar();
 		if(LastChar == '='){
+	// cout << LastChar << endl;
+	  LastChar = getchar();
 			return tok_neq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
 	}
   // Check for end of file.  Don't eat the EOF.
-  if (LastChar == EOF)
-    return tok_eof;
+  if (LastChar == EOF){
+	  return tok_eof;
+  }
   // Otherwise, return unknown token
-  cout << "Current Token:" << (char)LastChar << endl;
-  int ThisChar = LastChar;
-  LastChar = getchar();
+  //cout << "Current Token:" << (char)LastChar << endl;
+  //char ThisChar = LastChar;
+  //LastChar = getchar();
   return tok_unknown;
 }
 
@@ -260,11 +315,13 @@ static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
  
 // expression ::= '(' expression ')'
 static std::unique_ptr<ExprAST> ParseParenExpr() {
-  getNextToken(); // eat (.
-  auto V = ParseExpression();
+  getNextToken(); // eat (, and set point to CurTok
+  //cout << "Reached, CurTok=" << CurTok << endl;
+	auto V = ParseExpression();
   if (!V)
     return nullptr;
-  getNextToken();
+  getNextToken(); // eat )
+  //cout << "Received : " << CurTok << endl;
   if(CurTok != tok_rparan) return LogError("Expected ')'");
   return V;
 }
@@ -272,6 +329,8 @@ static std::unique_ptr<ExprAST> ParseParenExpr() {
 //	expression::= '(' op expression expression ')'
 static std::unique_ptr<ExprAST> ParseBinExpr(){
 	int op = CurTok;
+
+	//cout << "op=" << CurTok << endl;
 	getNextToken();
 	auto first = ParseExpression();
 	if(!first) return LogError("Binary Expression Parsing Error, first operand");
@@ -301,7 +360,10 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
   switch (CurTok) {
-  case tok_arg:
+ default:
+	// cout << "token received:" << CurTok << endl;
+  return LogError("Invalid token received for parsing");
+ case tok_arg:
 	return ParseArgExpr();
   case tok_number:
     return ParseNumberExpr();
@@ -325,8 +387,8 @@ case tok_false:
 		return ParseBranchConsExpr();
 case tok_if:
 		return ParseConditionExpr();
-  default:
-    return LogError("unknown token when expecting an expression");
+case tok_eof:
+		return nullptr;
 }
 }
 
@@ -437,23 +499,30 @@ static int compile() {
   // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
   int i=0;
+  int t;
   for(auto &arg:F->args()){ //iterator args()
 	  ArgValues[names[i]] = &arg;
 		  i++;
   }
-  
-  while(true){
-	getNextToken();
-	if(CurTok == EOF){cout<< "EOF reached"<<endl; break;}
+  int y=0;
+   while(true){
+	t = getNextToken();
+	if(t==tok_eof) break;
+	//cout << "got token" << t <<" in itr:"<< y << endl;
 	auto V = ParseExpression();
 	if(!V) return 1;
+	//cout << "parsed in itr:" << y << endl;
 	Value *generated = V->codegen();
+	//cout << "Mainloop iteration:"<< y <<endl;
+	y++;
   }
+
 
   Value *RetVal = ConstantInt::get(C, APInt(64, 0));
   Builder.CreateRet(RetVal);
   assert(!verifyModule(*M, &outs()));
   M->dump();
+
   return 0;
 }
 
