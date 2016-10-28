@@ -1,0 +1,4 @@
+# returns 0
+(seq
+ (set a0 m0)
+ (- a0 m0))
