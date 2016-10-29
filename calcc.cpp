@@ -56,14 +56,26 @@ static double NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
-static char LastChar = ' ';
 static int gettok() {
 
-  // Skip any whitespace.
-  while (isspace(LastChar))
-    LastChar = getchar();
+	static char LastChar = ' ';
 
-  if (isalpha(LastChar)) { // arg: a[0-5]
+  // Skip any whitespace.
+  while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r')
+    LastChar = getchar();
+  
+  if (LastChar == '#') {
+    // Read until end of line.
+    do{
+      LastChar = getchar();
+	}while ((LastChar != EOF) && (LastChar != '\n') && (LastChar != '\r'));
+    if (LastChar == EOF){
+      return tok_eof;
+	}
+	return tok_comment;
+  }
+
+  if (isalpha(LastChar)) {
     IdentifierStr = LastChar;
     while (isalnum((LastChar = getchar())))
       IdentifierStr += LastChar;
@@ -103,16 +115,6 @@ static int gettok() {
     return tok_number;
   }
 
-  if (LastChar == '#') {
-    // Comment until end of line.
-    do
-      LastChar = getchar();
-    while (LastChar != EOF || LastChar != '\n' || LastChar != '\r');
-
-    if (LastChar != EOF){
-      return tok_eof;
-	}
-  }
 	if(LastChar=='('){
 	//cout << LastChar << endl;
 	LastChar = getchar();
@@ -495,7 +497,7 @@ static int compile() {
   Function *F = Function::Create(FT, Function::ExternalLinkage, "f", &*M);
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-
+ Value *generated;
   // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
   int i=0;
@@ -508,17 +510,18 @@ static int compile() {
    while(true){
 	t = getNextToken();
 	if(t==tok_eof) break;
+	if(t==tok_comment){continue;}
 	//cout << "got token" << t <<" in itr:"<< y << endl;
 	auto V = ParseExpression();
 	if(!V) return 1;
 	//cout << "parsed in itr:" << y << endl;
-	Value *generated = V->codegen();
+	generated = V->codegen();
 	//cout << "Mainloop iteration:"<< y <<endl;
 	y++;
   }
 
-
-  Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+Value *RetVal = generated;
+ // Value *RetVal = ConstantInt::get(C, APInt(64, 0));
   Builder.CreateRet(RetVal);
   assert(!verifyModule(*M, &outs()));
   M->dump();
