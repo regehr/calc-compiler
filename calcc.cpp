@@ -56,14 +56,20 @@ static double NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
+static char LastChar = ' ';
+
 static int gettok() {
 
-	static char LastChar = ' ';
 
   // Skip any whitespace.
   while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r')
     LastChar = getchar();
   
+  if (LastChar == EOF){
+		//cout << "EOF" << endl;
+	  return tok_eof;
+  }
+ 
   if (LastChar == '#') {
     // Read until end of line.
     do{
@@ -72,48 +78,52 @@ static int gettok() {
     if (LastChar == EOF){
       return tok_eof;
 	}
+	LastChar = getchar();
+	
 	return tok_comment;
   }
 
   if (isalpha(LastChar)) {
     IdentifierStr = LastChar;
-    while (isalnum((LastChar = getchar())))
-      IdentifierStr += LastChar;
+    //while (isalnum((LastChar = getchar())))
+    while (isalnum(LastChar=getchar())){ 
+		IdentifierStr += LastChar;
+	}
 
     if (IdentifierStr == "if"){
     //  cout << LastChar << endl;
-	  LastChar = getchar();
+	 //LastChar = getchar();
 		return tok_if;
 	}
 	if(IdentifierStr == "true"){
 	//	 cout << LastChar << endl;
-		  LastChar = getchar();
+	//	 LastChar = getchar();
 	 	 return tok_true;
 	}
 	if(IdentifierStr=="false"){
- cout << IdentifierStr << endl;
-	  LastChar = getchar();
+	//cout << IdentifierStr << endl;
+	//  LastChar = getchar();
 		return tok_false;
 	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
 	  ArgName = IdentifierStr;
 	//cout << IdentifierStr << endl;
-	  LastChar = getchar();
+	// LastChar = getchar();
 		return tok_arg;
 	}
   }
 
   if (isdigit(LastChar)) { // Number: [0-9]+ only integers
-    std::string NumStr;
-    do {
+    std::string NumStr="";
+    while (isdigit(LastChar)){
       NumStr += LastChar;
       LastChar = getchar();
-    } while (isdigit(LastChar));
+    } 
 	//cout << NumStr << endl;
     NumVal = strtod(NumStr.c_str(), nullptr);
-	  //LastChar = getchar();
+	 //LastChar = getchar();
     return tok_number;
-  }
+	 }
 
 	if(LastChar=='('){
 	//cout << LastChar << endl;
@@ -144,7 +154,7 @@ static int gettok() {
 				neg+= LastChar;
 			}
 			NumVal = -1*strtod(neg.c_str(),nullptr);
-	  //LastChar = getchar();
+	  LastChar = getchar();
 			return tok_number;
 		}
 	}
@@ -203,14 +213,9 @@ static int gettok() {
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
 	}
-  // Check for end of file.  Don't eat the EOF.
-  if (LastChar == EOF){
-	  return tok_eof;
-  }
-  // Otherwise, return unknown token
-  //cout << "Current Token:" << (char)LastChar << endl;
-  //char ThisChar = LastChar;
-  //LastChar = getchar();
+
+ // Otherwise, return unknown token
+  cout << "Unknown:" << LastChar << endl;
   return tok_unknown;
 }
 
@@ -306,27 +311,33 @@ static std::unique_ptr<ExprAST> ParseArgExpr(){
 static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
 
 	unsigned int val;
+	//cout << "CurTok:" << CurTok << "from ParseBranchConstExpr()" << endl;
 	if(CurTok == tok_true){
+		//cout << "got true" << endl;
 	   	val =1;
 	}
 	if(CurTok == tok_false){
-	   	val = 0;
+	//	cout << "got false" << endl;
+		val = 0;
 	}
+	//getNextToken(); // advance to the next token, hopefully ')'
 		return llvm::make_unique<ConditionConstExprAST>(val);
 }
  
 // expression ::= '(' expression ')'
 static std::unique_ptr<ExprAST> ParseParenExpr() {
-  getNextToken(); // eat (, and set point to CurTok
-  //cout << "Reached, CurTok=" << CurTok << endl;
-	auto V = ParseExpression();
+  getNextToken(); // eat (, and point CurTok to next
+  //cout << "CurTok:" << CurTok << " 1st from ParseParenExpr()" << endl;
+  auto V = ParseExpression();
   if (!V)
-    return nullptr;
-  getNextToken(); // eat )
-  //cout << "Received : " << CurTok << endl;
+	  return nullptr;
+   
+  getNextToken();
+  //cout << "CurTok:" << CurTok << " 2nd from ParseParenExpr()" << endl;
+
   if(CurTok != tok_rparan) return LogError("Expected ')'");
-  return V;
-}
+	return V;
+  }
 
 //	expression::= '(' op expression expression ')'
 static std::unique_ptr<ExprAST> ParseBinExpr(){
@@ -347,12 +358,22 @@ static std::unique_ptr<ExprAST> ParseBinExpr(){
 // expression::= '(' if condition expression expression ')'
 static std::unique_ptr<ExprAST> ParseConditionExpr(){
 	//CurTok = 'if'
-	getNextToken();
-
+	//cout << "CurTok:" << CurTok << " 1st from ParseConditionExpr()" << endl;
+	getNextToken(); // now CurTok is '('
+	//cout << "CurTok:" << CurTok << " 2nd from ParseBranchConstExpr()" << endl;
+	// conditions are treated as binary expressions or conditional constant expressions
 	auto condition = ParseExpression();
 	if(!condition) LogError("Conditional Expression Parsing Error");
+	
+	getNextToken();
+	//cout << "CurTok:" << CurTok << " 3rd from ParseBranchConstExpr()" << endl;
+
 	auto first = ParseExpression();
 	if(!first) LogError("Then Expression Parsing Error");
+	
+	getNextToken();
+	//cout << "CurTok:" << CurTok << " 4th from ParseBranchConstExpr()" << endl;
+
 	auto second = ParseExpression();
 	if(!second) LogError("Else Expression Parsing Error");
 
@@ -361,8 +382,10 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
-  switch (CurTok) {
- default:
+  //cout << "From the top:" << CurTok << endl;
+
+	switch (CurTok) {
+	 default:
 	// cout << "token received:" << CurTok << endl;
   return LogError("Invalid token received for parsing");
  case tok_arg:
@@ -497,7 +520,7 @@ static int compile() {
   Function *F = Function::Create(FT, Function::ExternalLinkage, "f", &*M);
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
- Value *generated;
+  Value *generated;
   // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
   int i=0;
@@ -507,24 +530,27 @@ static int compile() {
 		  i++;
   }
   int y=0;
-   while(true){
-	t = getNextToken();
+  t= getNextToken();
+  
+   while(t!=tok_eof){
+	cout << CurTok << endl;
 	if(t==tok_eof) break;
-	if(t==tok_comment){continue;}
+	if(t==tok_comment){t=getNextToken(); continue;}
 	//cout << "got token" << t <<" in itr:"<< y << endl;
 	auto V = ParseExpression();
 	if(!V) return 1;
 	//cout << "parsed in itr:" << y << endl;
 	generated = V->codegen();
 	//cout << "Mainloop iteration:"<< y <<endl;
+	t = getNextToken();
 	y++;
   }
 
-Value *RetVal = generated;
- // Value *RetVal = ConstantInt::get(C, APInt(64, 0));
-  Builder.CreateRet(RetVal);
-  assert(!verifyModule(*M, &outs()));
-  M->dump();
+	Value *RetVal = generated;
+	//Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+	Builder.CreateRet(RetVal);
+	assert(!verifyModule(*M, &outs()));
+	M->dump();
 
   return 0;
 }
