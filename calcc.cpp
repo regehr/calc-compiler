@@ -62,7 +62,7 @@ static std::string VarName; //m0,m1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
 static char LastChar = ' ';
-
+static int OpenPar = 0; // help identifying parenthesis-less expressions
 static int gettok() {
 
 
@@ -140,12 +140,14 @@ static int gettok() {
 
 	if(LastChar=='('){
 	//cout << LastChar << endl;
+	OpenPar++ ;
 	LastChar = getchar();
 		return tok_lparan;
 	}
 	if(LastChar==')'){ 
 	//cout << LastChar << endl;
-	  LastChar = getchar();
+		OpenPar-- ;
+		LastChar = getchar();
 		return tok_rparan;
 	}
 	if(LastChar=='+'){
@@ -167,7 +169,7 @@ static int gettok() {
 				neg+= LastChar;
 			}
 			NumVal = -1*strtod(neg.c_str(),nullptr);
-	  LastChar = getchar();
+	  //LastChar = getchar();
 			return tok_number;
 		}
 	}
@@ -391,37 +393,39 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
   //cout << "From the top:" << CurTok << endl;
-
+	if(OpenPar < 1){
+		return LogError("Expressions must be surrounded by parenthesis");
+	}
 	switch (CurTok) {
 	 default:
 		return LogError("Invalid token received for parsing");
 	 case tok_arg:
 		return ParseArgExpr();
-  case tok_number:
-    return ParseNumberExpr();
-  case tok_lparan:
-    return ParseParenExpr();
-  case tok_add:
-  case tok_sub:
-  case tok_mul:
-  case tok_div:
-  case tok_mod:
-  case tok_gt:
-  case tok_gte:
-  case tok_lt:
-  case tok_lte:
-  case tok_eq:
-  case tok_neq:
-	return ParseBinExpr();	
-  case tok_true:
+	 case tok_number:
+		return ParseNumberExpr();
+	 case tok_lparan:
+		return ParseParenExpr();
+	 case tok_add:
+	 case tok_sub:
+	 case tok_mul:
+	 case tok_div:
+	 case tok_mod:
+	 case tok_gt:
+	 case tok_gte:
+	 case tok_lt:
+	 case tok_lte:
+	 case tok_eq:
+	 case tok_neq:
+		return ParseBinExpr();	
+	 case tok_true:
 		return ParseBranchConsExpr(); 
-case tok_false:
+	 case tok_false:
 		return ParseBranchConsExpr();
-case tok_if:
+	 case tok_if:
 		return ParseConditionExpr();
-case tok_eof:
+	 case tok_eof:
 		return nullptr;
-}
+	}
 }
 
 //===----------------------------------------------------------------------===//
@@ -527,7 +531,8 @@ static int compile() {
   Function *F = Function::Create(FT, Function::ExternalLinkage, "f", &*M);
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  Value *generated;
+  Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+
   // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
   int i=0;
@@ -540,20 +545,17 @@ static int compile() {
   t= getNextToken();
   
    while(t!=tok_eof){
-	cout << CurTok << endl;
+//	cout << CurTok << endl;
 	if(t==tok_eof) break;
 	if(t==tok_comment){t=getNextToken(); continue;}
 
 	auto V = ParseExpression();
 	if(!V) return 1;
 
-	generated = V->codegen();
+	RetVal = V->codegen();
 
 	t = getNextToken();
   }
-
-	Value *RetVal = generated;
-	//Value *RetVal = ConstantInt::get(C, APInt(64, 0));
 	Builder.CreateRet(RetVal);
 	assert(!verifyModule(*M, &outs()));
 	M->dump();
@@ -561,4 +563,4 @@ static int compile() {
   return 0;
 }
 
-	int main(void) { return compile(); }
+int main(void) { return compile(); }
