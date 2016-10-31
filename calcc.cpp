@@ -48,7 +48,10 @@ enum Token {
   tok_lte,
   tok_eq,
   tok_neq,
-  tok_unknown
+  tok_unknown,
+  tok_set,
+  tok_while,
+  tok_seq
 };
 
 static std::string IdentifierStr; // Filled in if tok_identifier
@@ -106,6 +109,15 @@ static int gettok() {
 	  ArgName = IdentifierStr;
 	//cout << IdentifierStr << endl;
 		return tok_arg;
+	}
+	if(IdentifierStr=="while"){
+		return tok_while;
+	}	
+	if(IdentifierStr=="seq"){
+		return tok_seq;
+	}
+	if(IdentifierStr=="set"){
+		return tok_set;
 	}
   }
 
