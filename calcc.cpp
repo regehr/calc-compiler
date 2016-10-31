@@ -51,12 +51,14 @@ enum Token {
   tok_unknown,
   tok_set,
   tok_while,
-  tok_seq
+  tok_seq,
+  tok_mut
 };
 
 static std::string IdentifierStr; // Filled in if tok_identifier
 static double NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
+static std::string VarName; //m0,m1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
 static char LastChar = ' ';
@@ -109,6 +111,10 @@ static int gettok() {
 	  ArgName = IdentifierStr;
 	//cout << IdentifierStr << endl;
 		return tok_arg;
+	}
+	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5"){
+		VarName = IdentifierStr;
+		return tok_mut;
 	}
 	if(IdentifierStr=="while"){
 		return tok_while;
