@@ -92,23 +92,19 @@ static int gettok() {
 
     if (IdentifierStr == "if"){
     //  cout << LastChar << endl;
-	 //LastChar = getchar();
 		return tok_if;
 	}
 	if(IdentifierStr == "true"){
 	//	 cout << LastChar << endl;
-	//	 LastChar = getchar();
 	 	 return tok_true;
 	}
 	if(IdentifierStr=="false"){
 	//cout << IdentifierStr << endl;
-	//  LastChar = getchar();
 		return tok_false;
 	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
 	  ArgName = IdentifierStr;
 	//cout << IdentifierStr << endl;
-	// LastChar = getchar();
 		return tok_arg;
 	}
   }
@@ -121,7 +117,6 @@ static int gettok() {
     } 
 	//cout << NumStr << endl;
     NumVal = strtod(NumStr.c_str(), nullptr);
-	 //LastChar = getchar();
     return tok_number;
 	 }
 
@@ -343,7 +338,6 @@ static std::unique_ptr<ExprAST> ParseParenExpr() {
 static std::unique_ptr<ExprAST> ParseBinExpr(){
 	int op = CurTok;
 
-	//cout << "op=" << CurTok << endl;
 	getNextToken();
 	auto first = ParseExpression();
 	if(!first) return LogError("Binary Expression Parsing Error, first operand");
@@ -357,22 +351,18 @@ static std::unique_ptr<ExprAST> ParseBinExpr(){
 
 // expression::= '(' if condition expression expression ')'
 static std::unique_ptr<ExprAST> ParseConditionExpr(){
-	//CurTok = 'if'
-	//cout << "CurTok:" << CurTok << " 1st from ParseConditionExpr()" << endl;
+
 	getNextToken(); // now CurTok is '('
-	//cout << "CurTok:" << CurTok << " 2nd from ParseBranchConstExpr()" << endl;
 	// conditions are treated as binary expressions or conditional constant expressions
 	auto condition = ParseExpression();
 	if(!condition) LogError("Conditional Expression Parsing Error");
 	
 	getNextToken();
-	//cout << "CurTok:" << CurTok << " 3rd from ParseBranchConstExpr()" << endl;
 
 	auto first = ParseExpression();
 	if(!first) LogError("Then Expression Parsing Error");
 	
 	getNextToken();
-	//cout << "CurTok:" << CurTok << " 4th from ParseBranchConstExpr()" << endl;
 
 	auto second = ParseExpression();
 	if(!second) LogError("Else Expression Parsing Error");
@@ -386,10 +376,9 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 
 	switch (CurTok) {
 	 default:
-	// cout << "token received:" << CurTok << endl;
-  return LogError("Invalid token received for parsing");
- case tok_arg:
-	return ParseArgExpr();
+		return LogError("Invalid token received for parsing");
+	 case tok_arg:
+		return ParseArgExpr();
   case tok_number:
     return ParseNumberExpr();
   case tok_lparan:
@@ -529,21 +518,20 @@ static int compile() {
 	  ArgValues[names[i]] = &arg;
 		  i++;
   }
-  int y=0;
+
   t= getNextToken();
   
    while(t!=tok_eof){
 	cout << CurTok << endl;
 	if(t==tok_eof) break;
 	if(t==tok_comment){t=getNextToken(); continue;}
-	//cout << "got token" << t <<" in itr:"<< y << endl;
+
 	auto V = ParseExpression();
 	if(!V) return 1;
-	//cout << "parsed in itr:" << y << endl;
+
 	generated = V->codegen();
-	//cout << "Mainloop iteration:"<< y <<endl;
+
 	t = getNextToken();
-	y++;
   }
 
 	Value *RetVal = generated;
