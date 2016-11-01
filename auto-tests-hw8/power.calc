@@ -1,0 +1,8 @@
+# ARGS 2 10
+# RESULT 1024
+(seq (set a0 m0)
+     (seq (set a1 m1)
+          (while (!= m1 1)
+                 (seq (set (* m0 a0) m0)
+                      (seq (set (- m1 1) m1) m0)))))
+

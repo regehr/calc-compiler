@@ -1,0 +1,16 @@
+# takes 2 args a0 and a1 and returns the power of a0 to a1 
+#ARGS 5 4
+#RESULT ERROR
+seq((set 1 m1)
+    seq ( (set a1 m2)
+          ( while (> m2 0) 
+              (
+                  seq ( (set (- m2 1) m2)
+                        (set (* m1 a0) m1)
+                      )
+              )
+          )
+     )
+)
+
+               

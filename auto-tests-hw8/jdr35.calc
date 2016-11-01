@@ -1,0 +1,4 @@
+# ARGS 200
+# RESULT 200
+(seq (set a0 m0) m0)
+

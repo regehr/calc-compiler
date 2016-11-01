@@ -1,0 +1,17 @@
+# ARGS 1000
+# RESULT 2
+# The equation y^2 = x^3 - 4 has two positive integral solutions.
+# m0 = x
+# m1 = y
+# m9 = counter for solutions
+# a0 = upper bound for search
+(seq
+  (while
+    (!= m0 a0)
+    (seq (while
+           (!= m1 a0)
+           (seq (set (+ (if (== (* m1 m1) (- (* m0 (* m0 m0)) 4)) 1 0) m9) m9)
+                (set (+ 1 m1) m1)))
+         (seq (set (+ 1 m0) m0) (set 0 m1))))
+  m9
+)

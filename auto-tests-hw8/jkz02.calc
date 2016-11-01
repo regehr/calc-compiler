@@ -1,0 +1,9 @@
+# ARGS
+# RESULT 500
+(seq (seq (if true 
+              (set (+ 0 500) m0)
+              (set (+ 0 0) m0))
+          (if true (+ 0 1) (+ 0 0)))
+     m0)
+# Tests non-trival mutation across multiple phi-nodes as well 
+# as order of operations.

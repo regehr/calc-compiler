@@ -1,0 +1,4 @@
+# ARGS 5
+# RESULT 10
+(seq (set 5 m0)
+     (+ a0 m0))
