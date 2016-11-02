@@ -16,6 +16,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
+#include <stdint.h>
 using namespace llvm;
 using namespace std;
 
@@ -52,31 +53,35 @@ enum Token {
   tok_set,
   tok_while,
   tok_seq,
-  tok_mut
+  tok_mut,
+  tok_intoflow
 };
 
 static std::string IdentifierStr; // Filled in if tok_identifier
-static double NumVal;             // Filled in if tok_number
+static int64_t NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
 static std::string VarName; //m0,m1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
 static char LastChar = ' ';
 static int OpenPar = 0; // help identifying parenthesis-less expressions
+
+static bool isLineBegin = false;
+
 static int gettok() {
 
-
   // Skip any whitespace.
-  while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r')
-    LastChar = getchar();
-  
+  while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r'){
+	  LastChar = getchar();
+  }
+ 
   if (LastChar == EOF){
 		//cout << "EOF" << endl;
 	  return tok_eof;
   }
  
   if (LastChar == '#') {
-    // Read until end of line.
+    // Read until end of line
     do{
       LastChar = getchar();
 	}while ((LastChar != EOF) && (LastChar != '\n') && (LastChar != '\r'));
@@ -112,7 +117,7 @@ static int gettok() {
 	//cout << IdentifierStr << endl;
 		return tok_arg;
 	}
-	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5"){
+	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5" || IdentifierStr == "m6"|| IdentifierStr == "m7"|| IdentifierStr == "m8"|| IdentifierStr == "m9" ){
 		VarName = IdentifierStr;
 		return tok_mut;
 	}
@@ -134,7 +139,10 @@ static int gettok() {
       LastChar = getchar();
     } 
 	//cout << NumStr << endl;
-    NumVal = strtod(NumStr.c_str(), nullptr);
+    NumVal = strtol(NumStr.c_str(), nullptr,10);
+	//LastChar = getchar();
+	cout << "Positive:" << NumVal << endl;
+	if(errno == ERANGE){return tok_intoflow;}
     return tok_number;
 	 }
 
@@ -164,12 +172,15 @@ static int gettok() {
 		}
 		else if(isdigit(LastChar)){
 			std::string neg;
+			neg="-";
 			neg+=LastChar;
 			while(isdigit(LastChar=getchar())){
 				neg+= LastChar;
 			}
-			NumVal = -1*strtod(neg.c_str(),nullptr);
-	  //LastChar = getchar();
+			NumVal = strtol(neg.c_str(),nullptr,10);
+			cout << "Negetive:" << NumVal << endl;
+			if(errno == ERANGE){return tok_intoflow;}
+	  
 			return tok_number;
 		}
 	}
@@ -247,10 +258,10 @@ public:
 
 /// NumberExprAST - Expression class for numeric literals like "1", only integers
 class NumberExprAST : public ExprAST {
-  int Val; // convert to APInt(64,Val) during codegen
+int64_t Val; // convert to APInt(64,Val) during codegen
 
 public:
-  NumberExprAST(int Val) : Val(Val) {}
+  NumberExprAST(int64_t Val) : Val(Val) {}
   Value *codegen() override;
 };
 
@@ -314,8 +325,9 @@ static std::unique_ptr<ExprAST> ParseExpression();
 
 /// numberexpr ::= number
 static std::unique_ptr<ExprAST> ParseNumberExpr() {
-  auto Result = llvm::make_unique<NumberExprAST>(NumVal);
-  return std::move(Result);
+	//if((NumVal < s64MIN)|| (NumVal > s64MAX)){ return LogError("Integer Overflow");}
+	auto Result = llvm::make_unique<NumberExprAST>(NumVal);
+	return std::move(Result);
 }
 
 /// numberexpr ::= Arg
@@ -390,6 +402,26 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 	return llvm::make_unique<ConditionExprAST>(std::move(condition),std::move(first),std::move(second));
 }
 
+static std::unique_ptr<ExprAST> ParseMutableExpr(){
+
+}
+
+
+static std::unique_ptr<ExprAST> ParseSeqExpr(){
+
+}
+
+static std::unique_ptr<ExprAST> ParseSetExpr(){
+
+}
+
+static std::unique_ptr<ExprAST> ParseWhileExpr(){
+
+}
+
+
+
+
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
   //cout << "From the top:" << CurTok << endl;
@@ -399,6 +431,8 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 	switch (CurTok) {
 	 default:
 		return LogError("Invalid token received for parsing");
+	 case tok_intoflow:
+		return LogError("Integer Overflow");
 	 case tok_arg:
 		return ParseArgExpr();
 	 case tok_number:
@@ -423,6 +457,12 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 		return ParseBranchConsExpr();
 	 case tok_if:
 		return ParseConditionExpr();
+	 case tok_set:
+		return ParseSetExpr();
+	 case tok_seq:
+		return ParseSeqExpr();
+	 case tok_while:
+		return ParseWhileExpr();
 	 case tok_eof:
 		return nullptr;
 	}
@@ -438,7 +478,8 @@ Value *LogErrorV(const char *Str) {
 }
 
 Value *NumberExprAST::codegen() {
-  return ConstantInt::get(C, APInt(64,Val));
+	cout << "Codegen:" << Val << endl;
+  return ConstantInt::get(C, APInt(64,Val,true));
 }
 
 Value *ArgExprAST::codegen(){
@@ -453,31 +494,32 @@ Value *BinaryExprAST::codegen() {
   Value *first = First->codegen();
   Value *second = Second->codegen();
   if (!First || !Second)
-    return nullptr;
+	  return nullptr;
+
 	switch(Op){
-	case tok_add:
-		return Builder.CreateAdd(first, second, "addtmp");
-   case tok_sub:
-    return Builder.CreateSub(first, second, "subtmp");
-   case tok_mul:
-    return Builder.CreateMul(first, second, "multmp");
-  case tok_div:
-	return Builder.CreateUDiv(first,second,"divtmp");
-  case tok_mod:
-	return Builder.CreateURem(first, second, "modtmp");
-  case tok_gt:
-	return Builder.CreateICmpUGT(first,second,"gttmp");
-  case tok_gte:
-	return Builder.CreateICmpUGE(first,second,"gtetmp");
-  case tok_lt:
-	return Builder.CreateICmpULT(first,second,"lttmp");
-  case tok_lte:
-	return Builder.CreateICmpULE(first,second,"ltetmp");
-  case tok_eq:
-	return Builder.CreateICmpEQ(first,second,"eqtmp");
-  case tok_neq:
-	return Builder.CreateICmpNE(first,second,"neqtmp");
- }
+		case tok_add:
+			return Builder.CreateAdd(first, second, "addtmp");
+		case tok_sub:
+			return Builder.CreateSub(first, second, "subtmp");
+		case tok_mul:
+			return Builder.CreateMul(first, second, "multmp");
+		case tok_div:
+			return Builder.CreateUDiv(first,second,"divtmp");
+		case tok_mod:
+			return Builder.CreateURem(first, second, "modtmp");
+		case tok_gt:
+			return Builder.CreateICmpUGT(first,second,"gttmp");
+		case tok_gte:
+			return Builder.CreateICmpUGE(first,second,"gtetmp");
+		case tok_lt:
+			return Builder.CreateICmpULT(first,second,"lttmp");
+		case tok_lte:
+			return Builder.CreateICmpULE(first,second,"ltetmp");
+		case tok_eq:
+			return Builder.CreateICmpEQ(first,second,"eqtmp");
+		case tok_neq:
+			return Builder.CreateICmpNE(first,second,"neqtmp");
+	}
     return LogErrorV("invalid binary operator");
 }
 
@@ -539,7 +581,7 @@ static int compile() {
   int t;
   for(auto &arg:F->args()){ //iterator args()
 	  ArgValues[names[i]] = &arg;
-		  i++;
+	  i++;
   }
 
   t= getNextToken();
