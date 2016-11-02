@@ -74,12 +74,10 @@ static int gettok() {
   while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r'){
 	  LastChar = getchar();
   }
- 
   if (LastChar == EOF){
 		//cout << "EOF" << endl;
 	  return tok_eof;
   }
- 
   if (LastChar == '#') {
     // Read until end of line
     do{
@@ -89,32 +87,25 @@ static int gettok() {
       return tok_eof;
 	}
 	LastChar = getchar();
-	
 	return tok_comment;
   }
-
   if (isalpha(LastChar)) {
     IdentifierStr = LastChar;
-    //while (isalnum((LastChar = getchar())))
+
     while (isalnum(LastChar=getchar())){ 
 		IdentifierStr += LastChar;
 	}
-
     if (IdentifierStr == "if"){
-    //  cout << LastChar << endl;
 		return tok_if;
 	}
 	if(IdentifierStr == "true"){
-	//	 cout << LastChar << endl;
 	 	 return tok_true;
 	}
 	if(IdentifierStr=="false"){
-	//cout << IdentifierStr << endl;
 		return tok_false;
 	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
 	 ArgName = IdentifierStr;
-	//cout << IdentifierStr << endl;
 		return tok_arg;
 	}
 	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5" || IdentifierStr == "m6"|| IdentifierStr == "m7"|| IdentifierStr == "m8"|| IdentifierStr == "m9" ){
@@ -138,36 +129,28 @@ static int gettok() {
       NumStr += LastChar;
       LastChar = getchar();
     } 
-	//cout << NumStr << endl;
     NumVal = strtol(NumStr.c_str(), nullptr,10);
-	//LastChar = getchar();
-	cout << "Positive:" << NumVal << endl;
 	if(errno == ERANGE){return tok_intoflow;}
     return tok_number;
 	 }
-
 	if(LastChar=='('){
-	//cout << LastChar << endl;
 	OpenPar++ ;
 	LastChar = getchar();
 		return tok_lparan;
 	}
 	if(LastChar==')'){ 
-	//cout << LastChar << endl;
 		OpenPar-- ;
 		LastChar = getchar();
 		return tok_rparan;
 	}
 	if(LastChar=='+'){
-	//cout << LastChar << endl;
 	  LastChar = getchar();
 	   	return tok_add;
 	}
 	if(LastChar=='-'){ 
 		LastChar= getchar();
 		if(LastChar==' '){ 
-	//cout << LastChar << endl;
-	  LastChar = getchar();
+		   	LastChar = getchar();
 			return tok_sub;
 		}
 		else if(isdigit(LastChar)){
@@ -178,54 +161,45 @@ static int gettok() {
 				neg+= LastChar;
 			}
 			NumVal = strtol(neg.c_str(),nullptr,10);
-			cout << "Negetive:" << NumVal << endl;
 			if(errno == ERANGE){return tok_intoflow;}
 	  
 			return tok_number;
 		}
 	}
 	if(LastChar=='*'){
-	 //cout << LastChar << endl;
 	  LastChar = getchar();
 		return tok_mul;
 	}
 	if(LastChar=='/') {
-	// cout << LastChar << endl;
 	  LastChar = getchar();
 		return tok_div;
 	}
 	if(LastChar=='%'){
-	// cout << LastChar << endl;
 	  LastChar = getchar();
 	   	return tok_mod;
 	}
 	if(LastChar=='>'){
 		LastChar=getchar();
 		if(LastChar=='='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+			LastChar = getchar();
 		   	return tok_gte;
 		}
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+		LastChar = getchar();
 		return tok_gt;
 	}
 	if(LastChar=='<'){ 
 		LastChar=getchar();
 		if(LastChar=='='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+			LastChar = getchar();
 			return tok_lte;
 		}
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+		LastChar = getchar();
 		return tok_lt;
 	}
 	if(LastChar=='='){
 		LastChar=getchar();
 		if(LastChar=='='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+		   	LastChar = getchar();
 			return tok_eq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -233,8 +207,7 @@ static int gettok() {
 	if(LastChar == '!'){
 		LastChar = getchar();
 		if(LastChar == '='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+			LastChar = getchar();
 			return tok_neq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -325,7 +298,6 @@ static std::unique_ptr<ExprAST> ParseExpression();
 
 /// numberexpr ::= number
 static std::unique_ptr<ExprAST> ParseNumberExpr() {
-	//if((NumVal < s64MIN)|| (NumVal > s64MAX)){ return LogError("Integer Overflow");}
 	auto Result = llvm::make_unique<NumberExprAST>(NumVal);
 	return std::move(Result);
 }
@@ -338,13 +310,11 @@ static std::unique_ptr<ExprAST> ParseArgExpr(){
 static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
 
 	unsigned int val;
-	//cout << "CurTok:" << CurTok << "from ParseBranchConstExpr()" << endl;
+
 	if(CurTok == tok_true){
-		//cout << "got true" << endl;
 	   	val =1;
 	}
 	if(CurTok == tok_false){
-	//	cout << "got false" << endl;
 		val = 0;
 	}
 	//getNextToken(); // advance to the next token, hopefully ')'
@@ -354,14 +324,12 @@ static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
 // expression ::= '(' expression ')'
 static std::unique_ptr<ExprAST> ParseParenExpr() {
   getNextToken(); // eat (, and point CurTok to next
-  //cout << "CurTok:" << CurTok << " 1st from ParseParenExpr()" << endl;
   auto V = ParseExpression();
   if (!V)
 	  return nullptr;
    
   getNextToken();
-  //cout << "CurTok:" << CurTok << " 2nd from ParseParenExpr()" << endl;
-
+  
   if(CurTok != tok_rparan) return LogError("Expected ')'");
 	return V;
   }
@@ -418,9 +386,6 @@ static std::unique_ptr<ExprAST> ParseSetExpr(){
 static std::unique_ptr<ExprAST> ParseWhileExpr(){
 
 }
-
-
-
 
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
@@ -591,7 +556,7 @@ static int compile() {
   t= getNextToken();
   
    while(t!=tok_eof){
-//	cout << CurTok << endl;
+
 	if(t==tok_eof) break;
 	if(t==tok_comment){t=getNextToken(); continue;}
 
