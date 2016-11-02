@@ -113,7 +113,7 @@ static int gettok() {
 		return tok_false;
 	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
-	  ArgName = IdentifierStr;
+	 ArgName = IdentifierStr;
 	//cout << IdentifierStr << endl;
 		return tok_arg;
 	}
@@ -483,7 +483,7 @@ Value *NumberExprAST::codegen() {
 }
 
 Value *ArgExprAST::codegen(){
-	Value *V = ArgValues[ArgName];
+	Value *V = ArgValues[Name];
 	if(!V){
 		return nullptr;
 	}
@@ -579,10 +579,14 @@ static int compile() {
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
   int i=0;
   int t;
+ 
+  ArgValues.clear();
   for(auto &arg:F->args()){ //iterator args()
-	  ArgValues[names[i]] = &arg;
+	  arg.setName(names[i]);
+	  ArgValues[arg.getName().str()] = &arg;
 	  i++;
   }
+
 
   t= getNextToken();
   
