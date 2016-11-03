@@ -16,6 +16,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
+#include <stdint.h>
 using namespace llvm;
 using namespace std;
 
@@ -52,31 +53,33 @@ enum Token {
   tok_set,
   tok_while,
   tok_seq,
-  tok_mut
+  tok_mut,
+  tok_intoflow
 };
 
 static std::string IdentifierStr; // Filled in if tok_identifier
-static double NumVal;             // Filled in if tok_number
+static int64_t NumVal;             // Filled in if tok_number
 static std::string ArgName;		// a0, a1,...
 static std::string VarName; //m0,m1,...
 static std::string match;
 /// gettok - Return the next token from standard input.
 static char LastChar = ' ';
+static int OpenPar = 0; // help identifying parenthesis-less expressions
+
+static bool isLineBegin = false;
 
 static int gettok() {
 
-
   // Skip any whitespace.
-  while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r')
-    LastChar = getchar();
-  
+  while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r'){
+	  LastChar = getchar();
+  }
   if (LastChar == EOF){
 		//cout << "EOF" << endl;
 	  return tok_eof;
   }
- 
   if (LastChar == '#') {
-    // Read until end of line.
+    // Read until end of line
     do{
       LastChar = getchar();
 	}while ((LastChar != EOF) && (LastChar != '\n') && (LastChar != '\r'));
@@ -84,35 +87,28 @@ static int gettok() {
       return tok_eof;
 	}
 	LastChar = getchar();
-	
 	return tok_comment;
   }
-
   if (isalpha(LastChar)) {
     IdentifierStr = LastChar;
-    //while (isalnum((LastChar = getchar())))
+
     while (isalnum(LastChar=getchar())){ 
 		IdentifierStr += LastChar;
 	}
-
     if (IdentifierStr == "if"){
-    //  cout << LastChar << endl;
 		return tok_if;
 	}
 	if(IdentifierStr == "true"){
-	//	 cout << LastChar << endl;
 	 	 return tok_true;
 	}
 	if(IdentifierStr=="false"){
-	//cout << IdentifierStr << endl;
 		return tok_false;
 	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
-	  ArgName = IdentifierStr;
-	//cout << IdentifierStr << endl;
+	 ArgName = IdentifierStr;
 		return tok_arg;
 	}
-	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5"){
+	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5" || IdentifierStr == "m6"|| IdentifierStr == "m7"|| IdentifierStr == "m8"|| IdentifierStr == "m9" ){
 		VarName = IdentifierStr;
 		return tok_mut;
 	}
@@ -133,86 +129,77 @@ static int gettok() {
       NumStr += LastChar;
       LastChar = getchar();
     } 
-	//cout << NumStr << endl;
-    NumVal = strtod(NumStr.c_str(), nullptr);
+    NumVal = strtol(NumStr.c_str(), nullptr,10);
+	if(errno == ERANGE){return tok_intoflow;}
     return tok_number;
 	 }
-
 	if(LastChar=='('){
-	//cout << LastChar << endl;
+	OpenPar++ ;
 	LastChar = getchar();
 		return tok_lparan;
 	}
 	if(LastChar==')'){ 
-	//cout << LastChar << endl;
-	  LastChar = getchar();
+		OpenPar-- ;
+		LastChar = getchar();
 		return tok_rparan;
 	}
 	if(LastChar=='+'){
-	//cout << LastChar << endl;
 	  LastChar = getchar();
 	   	return tok_add;
 	}
 	if(LastChar=='-'){ 
 		LastChar= getchar();
 		if(LastChar==' '){ 
-	//cout << LastChar << endl;
-	  LastChar = getchar();
+		   	LastChar = getchar();
 			return tok_sub;
 		}
 		else if(isdigit(LastChar)){
 			std::string neg;
+			neg="-";
 			neg+=LastChar;
 			while(isdigit(LastChar=getchar())){
 				neg+= LastChar;
 			}
-			NumVal = -1*strtod(neg.c_str(),nullptr);
-	  LastChar = getchar();
+			NumVal = strtol(neg.c_str(),nullptr,10);
+			if(errno == ERANGE){return tok_intoflow;}
+	  
 			return tok_number;
 		}
 	}
 	if(LastChar=='*'){
-	 //cout << LastChar << endl;
 	  LastChar = getchar();
 		return tok_mul;
 	}
 	if(LastChar=='/') {
-	// cout << LastChar << endl;
 	  LastChar = getchar();
 		return tok_div;
 	}
 	if(LastChar=='%'){
-	// cout << LastChar << endl;
 	  LastChar = getchar();
 	   	return tok_mod;
 	}
 	if(LastChar=='>'){
 		LastChar=getchar();
 		if(LastChar=='='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+			LastChar = getchar();
 		   	return tok_gte;
 		}
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+		LastChar = getchar();
 		return tok_gt;
 	}
 	if(LastChar=='<'){ 
 		LastChar=getchar();
 		if(LastChar=='='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+			LastChar = getchar();
 			return tok_lte;
 		}
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+		LastChar = getchar();
 		return tok_lt;
 	}
 	if(LastChar=='='){
 		LastChar=getchar();
 		if(LastChar=='='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+		   	LastChar = getchar();
 			return tok_eq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -220,8 +207,7 @@ static int gettok() {
 	if(LastChar == '!'){
 		LastChar = getchar();
 		if(LastChar == '='){
-	// cout << LastChar << endl;
-	  LastChar = getchar();
+			LastChar = getchar();
 			return tok_neq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -245,10 +231,10 @@ public:
 
 /// NumberExprAST - Expression class for numeric literals like "1", only integers
 class NumberExprAST : public ExprAST {
-  int Val; // convert to APInt(64,Val) during codegen
+int64_t Val; // convert to APInt(64,Val) during codegen
 
 public:
-  NumberExprAST(int Val) : Val(Val) {}
+  NumberExprAST(int64_t Val) : Val(Val) {}
   Value *codegen() override;
 };
 
@@ -312,8 +298,8 @@ static std::unique_ptr<ExprAST> ParseExpression();
 
 /// numberexpr ::= number
 static std::unique_ptr<ExprAST> ParseNumberExpr() {
-  auto Result = llvm::make_unique<NumberExprAST>(NumVal);
-  return std::move(Result);
+	auto Result = llvm::make_unique<NumberExprAST>(NumVal);
+	return std::move(Result);
 }
 
 /// numberexpr ::= Arg
@@ -324,13 +310,11 @@ static std::unique_ptr<ExprAST> ParseArgExpr(){
 static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
 
 	unsigned int val;
-	//cout << "CurTok:" << CurTok << "from ParseBranchConstExpr()" << endl;
+
 	if(CurTok == tok_true){
-		//cout << "got true" << endl;
 	   	val =1;
 	}
 	if(CurTok == tok_false){
-	//	cout << "got false" << endl;
 		val = 0;
 	}
 	//getNextToken(); // advance to the next token, hopefully ')'
@@ -340,14 +324,12 @@ static std::unique_ptr<ExprAST> ParseBranchConsExpr(){
 // expression ::= '(' expression ')'
 static std::unique_ptr<ExprAST> ParseParenExpr() {
   getNextToken(); // eat (, and point CurTok to next
-  //cout << "CurTok:" << CurTok << " 1st from ParseParenExpr()" << endl;
   auto V = ParseExpression();
   if (!V)
 	  return nullptr;
    
   getNextToken();
-  //cout << "CurTok:" << CurTok << " 2nd from ParseParenExpr()" << endl;
-
+  
   if(CurTok != tok_rparan) return LogError("Expected ')'");
 	return V;
   }
@@ -388,40 +370,67 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 	return llvm::make_unique<ConditionExprAST>(std::move(condition),std::move(first),std::move(second));
 }
 
+static std::unique_ptr<ExprAST> ParseMutableExpr(){
+
+}
+
+
+static std::unique_ptr<ExprAST> ParseSeqExpr(){
+
+}
+
+static std::unique_ptr<ExprAST> ParseSetExpr(){
+
+}
+
+static std::unique_ptr<ExprAST> ParseWhileExpr(){
+
+}
+
 /// primary parser
 static std::unique_ptr<ExprAST> ParseExpression() {
   //cout << "From the top:" << CurTok << endl;
-
+	if(OpenPar < 1){
+		return LogError("Expressions must be surrounded by parenthesis");
+	}
 	switch (CurTok) {
 	 default:
 		return LogError("Invalid token received for parsing");
+	 case tok_intoflow:
+		return LogError("Integer Overflow");
 	 case tok_arg:
 		return ParseArgExpr();
-  case tok_number:
-    return ParseNumberExpr();
-  case tok_lparan:
-    return ParseParenExpr();
-  case tok_add:
-  case tok_sub:
-  case tok_mul:
-  case tok_div:
-  case tok_mod:
-  case tok_gt:
-  case tok_gte:
-  case tok_lt:
-  case tok_lte:
-  case tok_eq:
-  case tok_neq:
-	return ParseBinExpr();	
-  case tok_true:
+	 case tok_number:
+		return ParseNumberExpr();
+	 case tok_lparan:
+		return ParseParenExpr();
+	 case tok_add:
+	 case tok_sub:
+	 case tok_mul:
+	 case tok_div:
+	 case tok_mod:
+	 case tok_gt:
+	 case tok_gte:
+	 case tok_lt:
+	 case tok_lte:
+	 case tok_eq:
+	 case tok_neq:
+		return ParseBinExpr();	
+	 case tok_true:
 		return ParseBranchConsExpr(); 
-case tok_false:
+	 case tok_false:
 		return ParseBranchConsExpr();
-case tok_if:
+	 case tok_if:
 		return ParseConditionExpr();
-case tok_eof:
+	 case tok_set:
+		return ParseSetExpr();
+	 case tok_seq:
+		return ParseSeqExpr();
+	 case tok_while:
+		return ParseWhileExpr();
+	 case tok_eof:
 		return nullptr;
-}
+	}
 }
 
 //===----------------------------------------------------------------------===//
@@ -434,11 +443,12 @@ Value *LogErrorV(const char *Str) {
 }
 
 Value *NumberExprAST::codegen() {
-  return ConstantInt::get(C, APInt(64,Val));
+	cout << "Codegen:" << Val << endl;
+  return ConstantInt::get(C, APInt(64,Val,true));
 }
 
 Value *ArgExprAST::codegen(){
-	Value *V = ArgValues[ArgName];
+	Value *V = ArgValues[Name];
 	if(!V){
 		return nullptr;
 	}
@@ -449,31 +459,32 @@ Value *BinaryExprAST::codegen() {
   Value *first = First->codegen();
   Value *second = Second->codegen();
   if (!First || !Second)
-    return nullptr;
+	  return nullptr;
+
 	switch(Op){
-	case tok_add:
-		return Builder.CreateAdd(first, second, "addtmp");
-   case tok_sub:
-    return Builder.CreateSub(first, second, "subtmp");
-   case tok_mul:
-    return Builder.CreateMul(first, second, "multmp");
-  case tok_div:
-	return Builder.CreateUDiv(first,second,"divtmp");
-  case tok_mod:
-	return Builder.CreateURem(first, second, "modtmp");
-  case tok_gt:
-	return Builder.CreateICmpUGT(first,second,"gttmp");
-  case tok_gte:
-	return Builder.CreateICmpUGE(first,second,"gtetmp");
-  case tok_lt:
-	return Builder.CreateICmpULT(first,second,"lttmp");
-  case tok_lte:
-	return Builder.CreateICmpULE(first,second,"ltetmp");
-  case tok_eq:
-	return Builder.CreateICmpEQ(first,second,"eqtmp");
-  case tok_neq:
-	return Builder.CreateICmpNE(first,second,"neqtmp");
- }
+		case tok_add:
+			return Builder.CreateAdd(first, second, "addtmp");
+		case tok_sub:
+			return Builder.CreateSub(first, second, "subtmp");
+		case tok_mul:
+			return Builder.CreateMul(first, second, "multmp");
+		case tok_div:
+			return Builder.CreateUDiv(first,second,"divtmp");
+		case tok_mod:
+			return Builder.CreateURem(first, second, "modtmp");
+		case tok_gt:
+			return Builder.CreateICmpUGT(first,second,"gttmp");
+		case tok_gte:
+			return Builder.CreateICmpUGE(first,second,"gtetmp");
+		case tok_lt:
+			return Builder.CreateICmpULT(first,second,"lttmp");
+		case tok_lte:
+			return Builder.CreateICmpULE(first,second,"ltetmp");
+		case tok_eq:
+			return Builder.CreateICmpEQ(first,second,"eqtmp");
+		case tok_neq:
+			return Builder.CreateICmpNE(first,second,"neqtmp");
+	}
     return LogErrorV("invalid binary operator");
 }
 
@@ -527,33 +538,35 @@ static int compile() {
   Function *F = Function::Create(FT, Function::ExternalLinkage, "f", &*M);
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  Value *generated;
+  Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+
   // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
   int i=0;
   int t;
+ 
+  ArgValues.clear();
   for(auto &arg:F->args()){ //iterator args()
-	  ArgValues[names[i]] = &arg;
-		  i++;
+	  arg.setName(names[i]);
+	  ArgValues[arg.getName().str()] = &arg;
+	  i++;
   }
+
 
   t= getNextToken();
   
    while(t!=tok_eof){
-	cout << CurTok << endl;
+
 	if(t==tok_eof) break;
 	if(t==tok_comment){t=getNextToken(); continue;}
 
 	auto V = ParseExpression();
 	if(!V) return 1;
 
-	generated = V->codegen();
+	RetVal = V->codegen();
 
 	t = getNextToken();
   }
-
-	Value *RetVal = generated;
-	//Value *RetVal = ConstantInt::get(C, APInt(64, 0));
 	Builder.CreateRet(RetVal);
 	assert(!verifyModule(*M, &outs()));
 	M->dump();
@@ -561,4 +574,4 @@ static int compile() {
   return 0;
 }
 
-	int main(void) { return compile(); }
+int main(void) { return compile(); }
