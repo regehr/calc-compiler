@@ -136,6 +136,9 @@ static int gettok() {
 	if(LastChar=='('){
 	OpenPar++ ;
 	LastChar = getchar();
+		if(LastChar == '('){//ouch! back to back left parentheses? 
+			return tok_unknown;
+		}
 		return tok_lparan;
 	}
 	if(LastChar==')'){ 
