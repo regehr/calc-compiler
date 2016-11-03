@@ -410,21 +410,48 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 	return llvm::make_unique<ConditionExprAST>(std::move(condition),std::move(first),std::move(second));
 }
 
-static std::unique_ptr<ExprAST> ParseMutableExpr(){
-
+static std::unique_ptr<ExprAST> ParseMutExpr(){
+	return llvm::make_unique<MutExprAST>(VarName);
 }
 
-
 static std::unique_ptr<ExprAST> ParseSeqExpr(){
+	getNextToken(); // eat 'seq'
+	auto first = ParseExpression();
+	if(!first) return nullptr;
 
+	getNextToken();
+	auto second = ParseExpression();
+	if(!second) return nullptr;
+
+	return llvm::make_unique<SeqExprAST>(std::move(first),std::move(second));
 }
 
 static std::unique_ptr<ExprAST> ParseSetExpr(){
+	getNextToken(); // eat 'set'
+
+	auto expr = ParseExpression();
+	if(!expr) return nullptr;
+
+	getNextToken();
+	if(CurTok!= tok_mut) return nullptr;
+	auto mut = ParseExpression();
+	if(!mut) return nullptr;
+	
+	return llvm::make_unique<SetExprAST>(std::move(expr),std::move(mut));
 
 }
 
 static std::unique_ptr<ExprAST> ParseWhileExpr(){
+	getNextToken();
 
+	auto cond = ParseExpression();
+	if(!cond) return nullptr;
+
+	getNextToken();
+	auto body = ParseExpression();
+	if(!body) return nullptr;
+
+	return llvm::make_unique<WhileExprAST>(std::move(cond),std::move(body));
 }
 
 /// primary parser
@@ -462,6 +489,8 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 		return ParseBranchConsExpr();
 	 case tok_if:
 		return ParseConditionExpr();
+	 case tok_mut:
+		return ParseMutExpr();
 	 case tok_set:
 		return ParseSetExpr();
 	 case tok_seq:
@@ -570,6 +599,15 @@ Value *ConditionExprAST::codegen(){
 Value *ConditionConstExprAST::codegen(){
 	return ConstantInt::get(C,APInt(1,val)); // 1 bit value i1
 }
+
+Value *MutExprAST::codegen(){}
+
+Value *SeqExprAST::codegen(){}
+
+Value *SetExprAST::codegen(){}
+
+Value *WhileExprAST::codegen(){}
+
 
 static int compile() {
   M->setTargetTriple(llvm::sys::getProcessTriple());
