@@ -278,6 +278,43 @@ public:
 	Value *codegen() override;
 };
 
+/// MutExprAST - Expression class for mutable vas
+
+class MutExprAST : public ExprAST{
+	std::string name;
+
+	public:
+	MutExprAST(const std::string &name): name(name){}
+	Value *codegen() override;
+};
+
+
+/// SetExprAST - Expression class for 'set' (set E M)
+class SetExprAST : public ExprAST{
+	std::unique_ptr<ExprAST> Exp, Mut;
+
+	public:
+	SetExprAST(std::unique_ptr<ExprAST> Exp, std::unique_ptr<ExprAST> Mut): Exp(std::move(Exp)), Mut(std::move(Mut)){}
+	Value *codegen() override;
+};
+
+class SeqExprAST: public ExprAST{
+	std::unique_ptr<ExprAST> First, Second;
+
+	public:
+	SeqExprAST(std::unique_ptr<ExprAST> First, std::unique_ptr<ExprAST> Second): First(std::move(First)), Second(std::move(Second)){}
+	Value *codegen() override;
+};
+
+class WhileExprAST : public ExprAST{
+	std::unique_ptr<ExprAST> Cond, Body;
+
+	public:
+	WhileExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Body): Cond(std::move(Cond)), Body(std::move(Body)){}
+	Value *codegen() override;
+
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
