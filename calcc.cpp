@@ -602,9 +602,24 @@ Value *ConditionConstExprAST::codegen(){
 
 Value *MutExprAST::codegen(){}
 
-Value *SeqExprAST::codegen(){}
+Value *SeqExprAST::codegen(){
+	Value* first = First->codegen();
+	Value *second = Second->codegen();
+	if(!first|| !second) return nullptr;
 
-Value *SetExprAST::codegen(){}
+	return second;
+}
+
+Value *SetExprAST::codegen(){
+	Value *expr = Expr->codegen();
+	if(!expr) return nullptr;
+	
+	Value *mut =  Mut->codegen();
+	if(!mut) return nullptr;
+
+	Builder.CreateStore(expre,mut);
+	return expr;
+}
 
 Value *WhileExprAST::codegen(){}
 
