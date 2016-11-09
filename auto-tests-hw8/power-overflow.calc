@@ -1,0 +1,8 @@
+# CHECK
+# ARGS 10 1000
+# RESULT OVERFLOW 139
+(seq (set a0 m0)
+     (seq (set a1 m1)
+          (while (!= m1 1)
+                 (seq (set (* m0 a0) m0)
+                      (seq (set (- m1 1) m1) m0)))))
