@@ -1,0 +1,4 @@
+# CHECK
+# ARGS 123 0
+# RESULT OVERFLOW 43
+(% a0 a1)
