@@ -1,0 +1,10 @@
+# ARGS 2 8
+# RESULT 35
+(seq (set a0 m0)
+     (seq (set a1 m1)
+          (while (>= m1 a0)(
+		seq (set (+ m0 m1) m0)	
+		(seq (set (- m1 1) m1)m0))
+	   )
+      )
+)

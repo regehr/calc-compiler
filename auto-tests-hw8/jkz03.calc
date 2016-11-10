@@ -1,0 +1,6 @@
+# ARGS
+# RESULT 0
+(while false (if true 0 0))
+# test for control flow inside a while loop. Designed to catch a bug
+# I had where I was using the wrong input block in a phi node in my
+# "conditional" block for whiles.
