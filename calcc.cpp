@@ -24,7 +24,7 @@ static LLVMContext C;
 static IRBuilder<NoFolder> Builder(C);
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 static std::map<std::string, Value*> ArgValues;
-
+static std::map<std::string, AllocaInst*> MutValues;
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -105,7 +105,7 @@ static int gettok() {
 		return tok_false;
 	}
     if (IdentifierStr == "a0"|| IdentifierStr == "a1"|| IdentifierStr == "a2"|| IdentifierStr == "a3" || IdentifierStr == "a4"|| IdentifierStr == "a5") {
-	 ArgName = IdentifierStr;
+		ArgName = IdentifierStr;
 		return tok_arg;
 	}
 	if(IdentifierStr == "m0"|| IdentifierStr == "m1"|| IdentifierStr == "m2"|| IdentifierStr == "m3" || IdentifierStr == "m4"|| IdentifierStr == "m5" || IdentifierStr == "m6"|| IdentifierStr == "m7"|| IdentifierStr == "m8"|| IdentifierStr == "m9" ){
@@ -136,6 +136,9 @@ static int gettok() {
 	if(LastChar=='('){
 	OpenPar++ ;
 	LastChar = getchar();
+		if(LastChar == '('){//ouch! back to back left parentheses? 
+			return tok_unknown;
+		}
 		return tok_lparan;
 	}
 	if(LastChar==')'){ 
@@ -275,6 +278,44 @@ public:
 	Value *codegen() override;
 };
 
+/// MutExprAST - Expression class for mutable vas
+
+class MutExprAST : public ExprAST{
+	std::string name;
+
+	public:
+	MutExprAST(const std::string &name): name(name){}
+	Value *codegen() override;
+};
+
+
+/// SetExprAST - Expression class for 'set' (set E M)
+class SetExprAST : public ExprAST{
+	std::unique_ptr<ExprAST> Exp;
+	std::string Mut;
+
+	public:
+	SetExprAST(std::unique_ptr<ExprAST> Exp, std::string &Mut): Exp(std::move(Exp)), Mut(Mut){}
+	Value *codegen() override;
+};
+
+class SeqExprAST: public ExprAST{
+	std::unique_ptr<ExprAST> First, Second;
+
+	public:
+	SeqExprAST(std::unique_ptr<ExprAST> First, std::unique_ptr<ExprAST> Second): First(std::move(First)), Second(std::move(Second)){}
+	Value *codegen() override;
+};
+
+class WhileExprAST : public ExprAST{
+	std::unique_ptr<ExprAST> Cond, Body;
+
+	public:
+	WhileExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Body): Cond(std::move(Cond)), Body(std::move(Body)){}
+	Value *codegen() override;
+
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -370,21 +411,47 @@ static std::unique_ptr<ExprAST> ParseConditionExpr(){
 	return llvm::make_unique<ConditionExprAST>(std::move(condition),std::move(first),std::move(second));
 }
 
-static std::unique_ptr<ExprAST> ParseMutableExpr(){
-
+static std::unique_ptr<ExprAST> ParseMutExpr(){
+	return llvm::make_unique<MutExprAST>(VarName);
 }
 
-
 static std::unique_ptr<ExprAST> ParseSeqExpr(){
+	getNextToken(); // eat 'seq'
+	auto first = ParseExpression();
+	if(!first) return nullptr;
 
+	getNextToken();
+	auto second = ParseExpression();
+	if(!second) return nullptr;
+
+	return llvm::make_unique<SeqExprAST>(std::move(first),std::move(second));
 }
 
 static std::unique_ptr<ExprAST> ParseSetExpr(){
+	getNextToken(); // eat 'set'
 
+	auto expr = ParseExpression();
+	if(!expr) return nullptr;
+
+	getNextToken();
+	if(CurTok!= tok_mut) return nullptr;
+	//auto mut = ParseExpression();
+	//if(!mut) return nullptr;
+	std::string mut = VarName;
+	return llvm::make_unique<SetExprAST>(std::move(expr),mut);
 }
 
 static std::unique_ptr<ExprAST> ParseWhileExpr(){
+	getNextToken();
 
+	auto cond = ParseExpression();
+	if(!cond) return nullptr;
+
+	getNextToken();
+	auto body = ParseExpression();
+	if(!body) return nullptr;
+
+	return llvm::make_unique<WhileExprAST>(std::move(cond),std::move(body));
 }
 
 /// primary parser
@@ -422,6 +489,8 @@ static std::unique_ptr<ExprAST> ParseExpression() {
 		return ParseBranchConsExpr();
 	 case tok_if:
 		return ParseConditionExpr();
+	 case tok_mut:
+		return ParseMutExpr();
 	 case tok_set:
 		return ParseSetExpr();
 	 case tok_seq:
@@ -531,6 +600,67 @@ Value *ConditionConstExprAST::codegen(){
 	return ConstantInt::get(C,APInt(1,val)); // 1 bit value i1
 }
 
+Value *MutExprAST::codegen(){
+	Value *v = MutValues[name];
+	if(!v) return nullptr;
+
+	return Builder.CreateLoad(v, name.c_str());
+}
+
+Value *SeqExprAST::codegen(){
+	Value* first = First->codegen();
+	Value *second = Second->codegen();
+	if(!first|| !second) return nullptr;
+
+	return second;
+}
+
+// (set E M) 
+Value *SetExprAST::codegen(){
+	Value *expr = Exp->codegen();
+	if(!expr) return nullptr;
+	
+	Value *m = MutValues[Mut];
+	Builder.CreateStore(expr,m);
+	return expr;
+}
+
+Value *WhileExprAST::codegen(){
+	Function *f = Builder.GetInsertBlock()->getParent();
+	BasicBlock *bb0 = Builder.GetInsertBlock();
+
+	Value *start = Constant::getNullValue(Type::getInt64Ty(C));
+	if(!start) return nullptr;
+
+	BasicBlock *loop = BasicBlock::Create(C,"",f);
+	Builder.CreateBr(loop);
+	Builder.SetInsertPoint(loop);
+
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+	phi->addIncoming(start,bb0);
+	
+	Value *cond = Cond->codegen();
+	if(!cond) return nullptr;
+
+	Value *cmp = Builder.CreateICmpEQ(cond, ConstantInt::get(C,APInt(1,1)),"");
+
+	BasicBlock *bb1 = BasicBlock::Create(C,"",f);
+	BasicBlock *bb2 = BasicBlock::Create(C,"",f);
+	Builder.CreateCondBr(cmp,bb1,bb2);
+
+	Builder.SetInsertPoint(bb2);
+	Value *v = Body->codegen();
+	if(!v) return nullptr;
+
+	BasicBlock *bb3 = Builder.GetInsertBlock();
+	phi->addIncoming(v,bb3);
+	Builder.CreateBr(loop);
+	Builder.SetInsertPoint(bb3);
+
+	return phi;
+}
+
+
 static int compile() {
   M->setTargetTriple(llvm::sys::getProcessTriple());
   std::vector<Type *> SixInts(6, Type::getInt64Ty(C));
@@ -542,7 +672,8 @@ static int compile() {
 
   // extract arguments a0-a5 from F->args() and put corresponding values in ArgValues (defined at the top of the file)
   std::string names[6] = {"a0","a1","a2","a3","a4","a5"};
-  int i=0;
+  std::string mutables[10] = {"m0","m1","m2","m3","m4","m5","m6","m7","m8","m9"};
+  int i = 0;
   int t;
  
   ArgValues.clear();
@@ -551,7 +682,15 @@ static int compile() {
 	  ArgValues[arg.getName().str()] = &arg;
 	  i++;
   }
-
+	
+  // use alloca for mutable vars
+  Value *z = ConstantInt::get(C,APInt(64,0)); // init to 0
+  for(i=0;i<=9;i++){
+	IRBuilder<> ir(&F->getEntryBlock(),F->getEntryBlock().begin());
+	AllocaInst *alloca = ir.CreateAlloca(Type::getInt64Ty(C),nullptr,mutables[i]);
+	Builder.CreateStore(z,alloca);
+	MutValues[mutables[i]] = alloca;
+  }
 
   t= getNextToken();
   
