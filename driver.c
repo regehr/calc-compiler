@@ -6,7 +6,7 @@ extern long f(long, long, long, long, long, long);
 #include <stdlib.h>
 
 void overflow_fail(int pos) {
-  printf("integer overflow at position %d\n", pos);
+  printf("integer error at position %d\n", pos);
   exit(-1);
 }
 
