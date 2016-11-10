@@ -24,12 +24,18 @@ sub test($) {
     open INF, "<$f" or die "OOPS: cannot open '$f'";
     my $result;
     my $args;
+    my $check;
     while (my $line = <INF>) {
         chomp $line;
 	if ($line =~ /RESULT (.*)$/) {
             die "BUGGY TESTCASE: more than one RESULT line"
                 if defined $result;
 	    $result = $1;
+	}
+	if ($line =~ /CHECK$/) {
+            die "BUGGY TESTCASE: more than one CHECK line"
+                if defined $check;
+	    $check = 1;
 	}
         if ($line =~ /ARGS\s*([0-9\ \-]*)\s*$/) {
             die "BUGGY TESTCASE: more than one ARG line"
@@ -47,8 +53,14 @@ sub test($) {
         scalar(@arglist) > 6;
     die "BUGGY TESTCASE: unexpected RESULT '$result'" unless
       ($result eq "ERROR" ||
-       $result =~ /^-?[0-9]+$/);
-    my $res = runit("$CALCC < $f > /dev/null 2> out.ll");
+       $result =~ /^-?[0-9]+$/ ||
+       $result =~ /^OVERFLOW [0-9]+$/);
+    my $res;
+    if ($check){
+        $res = runit("$CALCC -check < $f > /dev/null 2> out.ll");
+    } else {
+        $res = runit("$CALCC < $f > /dev/null 2> out.ll");
+    }
     if ($result eq "ERROR") {
 	if ($res == 1) {
 	    print "compiler correctly detected erroneous input\n";
@@ -71,7 +83,7 @@ sub test($) {
         $argstr .= "$arg ";
     }
     $res = runit("./a.out $argstr > output.txt");
-    if ($res != 0) {
+    if ($res != 0 && !$check) {
         print "COMPILER BUG: executable did not run successfully\n";
         return 0;
     }
@@ -80,6 +92,9 @@ sub test($) {
     my $prog_result;
     while (my $line = <INF>) {
 	chomp $line;
+    if ($line =~ "integer overflow at position ([0-9]+)") {
+        $prog_result = "OVERFLOW $1";
+    }
 	if ($line =~ /result = (-?[0-9]+)$/) {
 	    $prog_result = $1;
 	}

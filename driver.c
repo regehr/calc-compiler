@@ -5,6 +5,11 @@ extern long f(long, long, long, long, long, long);
 #include <stdio.h>
 #include <stdlib.h>
 
+void overflow_fail(int pos) {
+  printf("integer overflow at position %d\n", pos);
+  exit(-1);
+}
+
 int main(int argc, char *argv[]) {
   assert(sizeof(long) == 8);
   assert(argc <= 7);

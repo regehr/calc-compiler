@@ -1,0 +1,4 @@
+# ARGS
+# RESULT ERROR
+if (== a0 0) a1 a2
+

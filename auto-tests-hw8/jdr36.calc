@@ -1,0 +1,3 @@
+# ARGS 10000
+# RESULT 555
+(while (!= m0 a0) (seq (set (+ 1 m0) m0) 555))

@@ -1,0 +1,4 @@
+# ARGS 5 5
+# RESULT ERROR
+((+ a1 a2))
+
