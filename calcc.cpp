@@ -512,7 +512,7 @@ Value *LogErrorV(const char *Str) {
 }
 
 Value *NumberExprAST::codegen() {
-	cout << "Codegen:" << Val << endl;
+	//	cout << "Codegen:" << Val << endl;
   return ConstantInt::get(C, APInt(64,Val,true));
 }
 
@@ -628,35 +628,46 @@ Value *SetExprAST::codegen(){
 Value *WhileExprAST::codegen(){
 	Function *f = Builder.GetInsertBlock()->getParent();
 	BasicBlock *bb0 = Builder.GetInsertBlock();
+	
+	//Builder.SetInsertPoint(bb0);
 
 	Value *start = Constant::getNullValue(Type::getInt64Ty(C));
 	if(!start) return nullptr;
-
+	
 	BasicBlock *loop = BasicBlock::Create(C,"",f);
 	Builder.CreateBr(loop);
-	Builder.SetInsertPoint(loop);
 
+	Builder.SetInsertPoint(loop);
 	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
 	phi->addIncoming(start,bb0);
-	
 	Value *cond = Cond->codegen();
 	if(!cond) return nullptr;
 
 	Value *cmp = Builder.CreateICmpEQ(cond, ConstantInt::get(C,APInt(1,1)),"");
-
 	BasicBlock *bb1 = BasicBlock::Create(C,"",f);
 	BasicBlock *bb2 = BasicBlock::Create(C,"",f);
-	Builder.CreateCondBr(cmp,bb1,bb2);
+	//M->dump();
 
-	Builder.SetInsertPoint(bb2);
+	Builder.CreateCondBr(cmp,bb2,bb1);
+	//M->dump();
+	Builder.SetInsertPoint(bb2); 
 	Value *v = Body->codegen();
 	if(!v) return nullptr;
 
 	BasicBlock *bb3 = Builder.GetInsertBlock();
 	phi->addIncoming(v,bb3);
 	Builder.CreateBr(loop);
-	Builder.SetInsertPoint(bb3);
 
+	//M->dump();
+	Builder.SetInsertPoint(bb1);
+
+	//terminate basic block
+	//bb0->llvm::BasicBlock::getTerminator();
+	//loop->llvm::BasicBlock::getTerminator();
+	//bb1->llvm::BasicBlock::getTerminator();
+	//bb2->llvm::BasicBlock::getTerminator();
+	//bb3->llvm::BasicBlock::getTerminator();
+	//M->dump();
 	return phi;
 }
 
@@ -706,9 +717,12 @@ static int compile() {
 
 	t = getNextToken();
   }
+
+   cout << "passed 5" <<endl;
 	Builder.CreateRet(RetVal);
-	assert(!verifyModule(*M, &outs()));
+	//BB->llvm::BasicBlock::getTerminator();
 	M->dump();
+	assert(!verifyModule(*M, &outs()));
 
   return 0;
 }
