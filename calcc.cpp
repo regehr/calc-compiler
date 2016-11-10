@@ -25,6 +25,8 @@ static IRBuilder<NoFolder> Builder(C);
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 static std::map<std::string, Value*> ArgValues;
 static std::map<std::string, AllocaInst*> MutValues;
+static bool check=false;
+
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -562,9 +564,9 @@ Value *ConditionExprAST::codegen(){
 	if(!Br) return nullptr;
 	Br = Builder.CreateICmpEQ(Br,ConstantInt::get(C,APInt(1,1)),""); //i1
 
-	Function *f = Builder.GetInsertBlock()->getParent();
+	Function *iff = Builder.GetInsertBlock()->getParent();
 
-	BasicBlock *ThenBB = BasicBlock::Create(C,"then",f);
+	BasicBlock *ThenBB = BasicBlock::Create(C,"then",iff);
 	BasicBlock *ElseBB = BasicBlock::Create(C,"else");
 	BasicBlock *MergeBB = BasicBlock::Create(C,"");
 
@@ -577,7 +579,7 @@ Value *ConditionExprAST::codegen(){
 	Builder.CreateBr(MergeBB);
 	
 	ThenBB = Builder.GetInsertBlock();
-	f->getBasicBlockList().push_back(ElseBB);
+	iff->getBasicBlockList().push_back(ElseBB);
 	Builder.SetInsertPoint(ElseBB);
 
 	Value *else_val = Else->codegen();
@@ -586,7 +588,7 @@ Value *ConditionExprAST::codegen(){
 	Builder.CreateBr(MergeBB);
 	ElseBB = Builder.GetInsertBlock();
 
-	f->getBasicBlockList().push_back(MergeBB);
+	iff->getBasicBlockList().push_back(MergeBB);
 	Builder.SetInsertPoint(MergeBB);
 	PHINode *PN = Builder.CreatePHI(Type::getInt64Ty(C),2,"iftmp");
 
@@ -626,13 +628,13 @@ Value *SetExprAST::codegen(){
 }
 
 Value *WhileExprAST::codegen(){
-	Function *f = Builder.GetInsertBlock()->getParent();
+	Function *wf = Builder.GetInsertBlock()->getParent();
 	BasicBlock *bb0 = Builder.GetInsertBlock();
 
 	Value *start = Constant::getNullValue(Type::getInt64Ty(C));
 	if(!start) return nullptr;
 
-	BasicBlock *loop = BasicBlock::Create(C,"",f);
+	BasicBlock *loop = BasicBlock::Create(C,"",wf);
 	Builder.CreateBr(loop);
 	Builder.SetInsertPoint(loop);
 
@@ -644,9 +646,9 @@ Value *WhileExprAST::codegen(){
 
 	Value *cmp = Builder.CreateICmpEQ(cond, ConstantInt::get(C,APInt(1,1)),"");
 
-	BasicBlock *bb1 = BasicBlock::Create(C,"",f);
-	BasicBlock *bb2 = BasicBlock::Create(C,"",f);
-	Builder.CreateCondBr(cmp,bb1,bb2);
+	BasicBlock *bb1 = BasicBlock::Create(C,"",wf);
+	BasicBlock *bb2 = BasicBlock::Create(C,"",wf);
+	Builder.CreateCondBr(cmp,bb2,bb1);
 
 	Builder.SetInsertPoint(bb2);
 	Value *v = Body->codegen();
@@ -713,4 +715,13 @@ static int compile() {
   return 0;
 }
 
-int main(void) { return compile(); }
+int main(int argc, char **argv) { 
+	if(argc==2){
+		if(argv[1] == "-check") check = true;
+		else{
+			cout <<"bad argument!"<< endl;
+			exit(1);
+		}
+	} 
+	return compile(); 
+}
