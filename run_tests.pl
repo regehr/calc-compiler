@@ -92,7 +92,7 @@ sub test($) {
     my $prog_result;
     while (my $line = <INF>) {
 	chomp $line;
-    if ($line =~ "integer overflow at position ([0-9]+)") {
+    if ($line =~ "integer error at position ([0-9]+)") {
         $prog_result = "OVERFLOW $1";
     }
 	if ($line =~ /result = (-?[0-9]+)$/) {
