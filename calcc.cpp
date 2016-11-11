@@ -13,6 +13,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
@@ -26,7 +27,7 @@ static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 static std::map<std::string, Value*> ArgValues;
 static std::map<std::string, AllocaInst*> MutValues;
 static bool check=false;
-
+int charpos = -1; // everytime you get new char, increment
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -75,6 +76,7 @@ static int gettok() {
   // Skip any whitespace.
   while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r'){
 	  LastChar = getchar();
+	  charpos++;
   }
   if (LastChar == EOF){
 		//cout << "EOF" << endl;
@@ -84,11 +86,13 @@ static int gettok() {
     // Read until end of line
     do{
       LastChar = getchar();
+	  charpos++;
 	}while ((LastChar != EOF) && (LastChar != '\n') && (LastChar != '\r'));
     if (LastChar == EOF){
       return tok_eof;
 	}
 	LastChar = getchar();
+	charpos++;
 	return tok_comment;
   }
   if (isalpha(LastChar)) {
@@ -96,7 +100,9 @@ static int gettok() {
 
     while (isalnum(LastChar=getchar())){ 
 		IdentifierStr += LastChar;
+		charpos++;
 	}
+	charpos++; //compensate for the last getchar() call
     if (IdentifierStr == "if"){
 		return tok_if;
 	}
@@ -130,6 +136,7 @@ static int gettok() {
     while (isdigit(LastChar)){
       NumStr += LastChar;
       LastChar = getchar();
+	  charpos++;
     } 
     NumVal = strtol(NumStr.c_str(), nullptr,10);
 	if(errno == ERANGE){return tok_intoflow;}
@@ -138,6 +145,7 @@ static int gettok() {
 	if(LastChar=='('){
 	OpenPar++ ;
 	LastChar = getchar();
+	charpos++;
 		if(LastChar == '('){//ouch! back to back left parentheses? 
 			return tok_unknown;
 		}
@@ -146,16 +154,20 @@ static int gettok() {
 	if(LastChar==')'){ 
 		OpenPar-- ;
 		LastChar = getchar();
+		charpos++;
 		return tok_rparan;
 	}
 	if(LastChar=='+'){
 	  LastChar = getchar();
+	  charpos++;
 	   	return tok_add;
 	}
 	if(LastChar=='-'){ 
 		LastChar= getchar();
+		charpos++;
 		if(LastChar==' '){ 
 		   	LastChar = getchar();
+			charpos++;
 			return tok_sub;
 		}
 		else if(isdigit(LastChar)){
@@ -164,7 +176,9 @@ static int gettok() {
 			neg+=LastChar;
 			while(isdigit(LastChar=getchar())){
 				neg+= LastChar;
+				charpos++;
 			}
+			charpos++; // compensate for the last getchar() call
 			NumVal = strtol(neg.c_str(),nullptr,10);
 			if(errno == ERANGE){return tok_intoflow;}
 	  
@@ -172,47 +186,60 @@ static int gettok() {
 		}
 	}
 	if(LastChar=='*'){
-	  LastChar = getchar();
+		LastChar = getchar();
+		charpos++;
 		return tok_mul;
 	}
 	if(LastChar=='/') {
 	  LastChar = getchar();
+	  charpos++;
 		return tok_div;
 	}
 	if(LastChar=='%'){
 	  LastChar = getchar();
+	  charpos++;
 	   	return tok_mod;
 	}
 	if(LastChar=='>'){
 		LastChar=getchar();
+		charpos++;
 		if(LastChar=='='){
 			LastChar = getchar();
+			charpos++;
 		   	return tok_gte;
 		}
 		LastChar = getchar();
+		charpos++;
 		return tok_gt;
 	}
 	if(LastChar=='<'){ 
 		LastChar=getchar();
+		charpos++;
 		if(LastChar=='='){
 			LastChar = getchar();
+			charpos++;
 			return tok_lte;
 		}
 		LastChar = getchar();
+		charpos++;
 		return tok_lt;
 	}
 	if(LastChar=='='){
 		LastChar=getchar();
+		charpos++;
 		if(LastChar=='='){
 		   	LastChar = getchar();
+			charpos++;
 			return tok_eq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
 	}
 	if(LastChar == '!'){
 		LastChar = getchar();
+		charpos++;
 		if(LastChar == '='){
 			LastChar = getchar();
+			charpos++;
 			return tok_neq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -526,6 +553,18 @@ Value *ArgExprAST::codegen(){
 	return V;
 }
 
+
+// function to call the overflow intrinsics
+void OverflowRoutine(){
+
+
+}
+
+
+
+
+
+
 Value *BinaryExprAST::codegen() {
   Value *first = First->codegen();
   Value *second = Second->codegen();
@@ -727,7 +766,7 @@ static int compile() {
 	//BB->llvm::BasicBlock::getTerminator();
 	M->dump();
 	assert(!verifyModule(*M, &outs()));
-
+	cout << "num. of chars=" << charpos << endl;
   return 0;
 }
 
