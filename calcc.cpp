@@ -28,6 +28,10 @@ static std::map<std::string, Value*> ArgValues;
 static std::map<std::string, AllocaInst*> MutValues;
 static bool check=false;
 int charpos = -1; // everytime you get new char, increment
+
+// linking external function for overflow situation
+static FunctionType *ft_type = FunctionType::get(Type::getInt64Ty(C), Type::getInt64Ty(C),false);
+static Function *of_error_call = Function::Create(ft_type,Function::ExternalLinkage, "overflow_fail", &*M);
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -68,8 +72,6 @@ static std::string match;
 /// gettok - Return the next token from standard input.
 static char LastChar = ' ';
 static int OpenPar = 0; // help identifying parenthesis-less expressions
-
-static bool isLineBegin = false;
 
 static int gettok() {
 
@@ -553,17 +555,85 @@ Value *ArgExprAST::codegen(){
 	return V;
 }
 
-
 // function to call the overflow intrinsics
-void OverflowRoutine(){
+Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	cout << "OverflowRoutine" << endl;
+	Value *res64, *of,*v;
+	Value *intrinsic_args[2] = {arg1,arg2};
+
+	switch(binOp){
+		case tok_add:{
+			Function *sadd_f = Intrinsic::getDeclaration(&*M,Intrinsic::sadd_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(sadd_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		case tok_sub:{
+			Function *ssub_f = Intrinsic::getDeclaration(&*M,Intrinsic::ssub_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(ssub_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		case tok_mul:{
+						 cout << "mul" << endl;
+			Function *smul_f = Intrinsic::getDeclaration(&*M,Intrinsic::smul_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(smul_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+	}
+
+	// now generate code for the overflow check
+	Value *of_br = Builder.CreateICmpEQ(of,ConstantInt::get(C,APInt(1,1)),"");
+	Function *f = Builder.GetInsertBlock()->getParent();
+	BasicBlock *thenbb = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb = BasicBlock::Create(C,"");
+	BasicBlock *finalbb = BasicBlock::Create(C,"");
+	
+
+	APInt ofpos = APInt(64,charpos);
+	
+	Builder.CreateCondBr(of_br,thenbb,elsebb);
+
+	Builder.SetInsertPoint(thenbb);
+	std::vector <Value *> args;
+	args.push_back(ConstantInt::get(C,ofpos));
+	Builder.CreateCall(of_error_call,args,"");
+	
+		
+	Builder.CreateBr(finalbb);
+	thenbb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(elsebb);
+	Builder.SetInsertPoint(elsebb);
+	
+	Builder.CreateBr(finalbb);
+	elsebb = Builder.GetInsertBlock();
+	
+	f->getBasicBlockList().push_back(finalbb);
+	Builder.SetInsertPoint(finalbb);
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+
+	phi->addIncoming(res64,thenbb);
+	phi->addIncoming(res64,elsebb);
+
+	return phi;
+}
+
+//division check
+Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
 
 }
 
 
 
+// modulo check
+Value *ModRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
 
+
+}
 
 Value *BinaryExprAST::codegen() {
   Value *first = First->codegen();
@@ -573,15 +643,20 @@ Value *BinaryExprAST::codegen() {
 
 	switch(Op){
 		case tok_add:
-			return Builder.CreateAdd(first, second, "addtmp");
+			if(!check) return Builder.CreateAdd(first, second, "addtmp");
+			return OverflowRoutine(Op, charpos, first,second);
 		case tok_sub:
-			return Builder.CreateSub(first, second, "subtmp");
+			if(!check) return Builder.CreateSub(first, second, "subtmp");
+			return OverflowRoutine(Op,charpos,first,second);
 		case tok_mul:
-			return Builder.CreateMul(first, second, "multmp");
+			if(!check) return Builder.CreateMul(first, second, "multmp");
+			return OverflowRoutine(Op,charpos,first,second);
 		case tok_div:
-			return Builder.CreateUDiv(first,second,"divtmp");
+			if(!check) return Builder.CreateUDiv(first,second,"divtmp");
+			return DivRoutine(Op,charpos,first,second);
 		case tok_mod:
-			return Builder.CreateURem(first, second, "modtmp");
+			if(!check) return Builder.CreateURem(first, second, "modtmp");
+			return ModRoutine(Op,charpos,first,second);
 		case tok_gt:
 			return Builder.CreateICmpUGT(first,second,"gttmp");
 		case tok_gte:
@@ -772,7 +847,8 @@ static int compile() {
 
 int main(int argc, char **argv) { 
 	if(argc==2){
-		if(argv[1] == "-check") check = true;
+		cout << argv[1] << endl;
+		if(!strncmp(argv[1],"-check",6)) check = true;
 		else{
 			cout <<"bad argument!"<< endl;
 			exit(1);
