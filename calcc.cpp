@@ -28,7 +28,7 @@ static std::map<std::string, Value*> ArgValues;
 static std::map<std::string, AllocaInst*> MutValues;
 static bool check=false;
 int charpos = -1; // everytime you get new char, increment
-int operatorpos;
+int operatorpos; // charpos of the last operator
 // linking external function for overflow situation
 static FunctionType *ft_type = FunctionType::get(Type::getInt64Ty(C), Type::getInt64Ty(C),false);
 static Function *of_error_call = Function::Create(ft_type,Function::ExternalLinkage, "overflow_fail", &*M);
@@ -594,7 +594,7 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 	BasicBlock *finalbb = BasicBlock::Create(C,"");
 	
 
-	APInt ofpos = APInt(64,operatorpos);
+	APInt ofpos = APInt(64,pos);
 	
 	Builder.CreateCondBr(of_br,thenbb,elsebb);
 
@@ -624,6 +624,9 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 }
 
 //division check
+//two things should be checked
+//1. div by 0
+//2. LONG_MIN div by -1
 Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
 
@@ -633,9 +636,48 @@ Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
 // modulo check
 Value *ModRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	//check if arg2 is 0
+	Value *arg2zero = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,0)),"");
+	Function *f = Builder.GetInsertBlock()->getParent();
 
+	//if-then-else codegen
+	BasicBlock *thenbb = BasicBlock::Create(C, "", f);
+	BasicBlock *elsebb = BasicBlock::Create(C, "");
+	BasicBlock *finalbb = BasicBlock::Create(C, "");
 
+	Builder.CreateCondBr(arg2zero, thenbb, elsebb);
 
+	Builder.SetInsertPoint(thenbb);
+	APInt modZeroPos = APInt(64,pos);
+	std::vector<Value *> args;
+	args.push_back(ConstantInt::get(C,modZeroPos));
+	Builder.CreateCall(of_error_call, args, ""); // call external function
+
+	//return this value if mod 0
+	Value *trapVal = ConstantInt::get(C,APInt(64,-1));// the return value of thenbb does not matter because 'trap' kill the program with exit(-1) before the execution raaches this point
+
+	Builder.CreateBr(finalbb);
+	thenbb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(elsebb);
+	Builder.SetInsertPoint(elsebb);
+
+	Value *noTrapVal = Builder.CreateURem(arg1,arg2,"modtmp");// do the mod as usual
+	if(!noTrapVal) return nullptr;
+
+	Builder.CreateBr(finalbb);
+
+	elsebb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(finalbb);
+	Builder.SetInsertPoint(finalbb);
+
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+
+	phi->addIncoming(trapVal,thenbb);
+	phi->addIncoming(noTrapVal,elsebb);
+
+	return phi;
 }
 
 Value *BinaryExprAST::codegen() {
