@@ -28,7 +28,7 @@ static std::map<std::string, Value*> ArgValues;
 static std::map<std::string, AllocaInst*> MutValues;
 static bool check=false;
 int charpos = -1; // everytime you get new char, increment
-
+int operatorpos;
 // linking external function for overflow situation
 static FunctionType *ft_type = FunctionType::get(Type::getInt64Ty(C), Type::getInt64Ty(C),false);
 static Function *of_error_call = Function::Create(ft_type,Function::ExternalLinkage, "overflow_fail", &*M);
@@ -162,6 +162,7 @@ static int gettok() {
 	if(LastChar=='+'){
 	  LastChar = getchar();
 	  charpos++;
+	  operatorpos = charpos;
 	   	return tok_add;
 	}
 	if(LastChar=='-'){ 
@@ -169,6 +170,7 @@ static int gettok() {
 		charpos++;
 		if(LastChar==' '){ 
 		   	LastChar = getchar();
+			operatorpos = charpos;
 			charpos++;
 			return tok_sub;
 		}
@@ -189,16 +191,19 @@ static int gettok() {
 	}
 	if(LastChar=='*'){
 		LastChar = getchar();
+		operatorpos = charpos;
 		charpos++;
 		return tok_mul;
 	}
 	if(LastChar=='/') {
 	  LastChar = getchar();
+	  operatorpos = charpos;
 	  charpos++;
 		return tok_div;
 	}
 	if(LastChar=='%'){
 	  LastChar = getchar();
+	  operatorpos = charpos;
 	  charpos++;
 	   	return tok_mod;
 	}
@@ -557,7 +562,6 @@ Value *ArgExprAST::codegen(){
 
 // function to call the overflow intrinsics
 Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
-	cout << "OverflowRoutine" << endl;
 	Value *res64, *of,*v;
 	Value *intrinsic_args[2] = {arg1,arg2};
 
@@ -574,8 +578,7 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
 			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
 		}
-		case tok_mul:{
-						 cout << "mul" << endl;
+		case tok_mul: {
 			Function *smul_f = Intrinsic::getDeclaration(&*M,Intrinsic::smul_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
 			v = Builder.CreateCall(smul_f, ArrayRef<Value *>(intrinsic_args,2));
 			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
@@ -591,7 +594,7 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 	BasicBlock *finalbb = BasicBlock::Create(C,"");
 	
 
-	APInt ofpos = APInt(64,charpos);
+	APInt ofpos = APInt(64,operatorpos);
 	
 	Builder.CreateCondBr(of_br,thenbb,elsebb);
 
@@ -644,19 +647,19 @@ Value *BinaryExprAST::codegen() {
 	switch(Op){
 		case tok_add:
 			if(!check) return Builder.CreateAdd(first, second, "addtmp");
-			return OverflowRoutine(Op, charpos, first,second);
+			return OverflowRoutine(Op, operatorpos, first,second);
 		case tok_sub:
 			if(!check) return Builder.CreateSub(first, second, "subtmp");
-			return OverflowRoutine(Op,charpos,first,second);
+			return OverflowRoutine(Op, operatorpos,first,second);
 		case tok_mul:
 			if(!check) return Builder.CreateMul(first, second, "multmp");
-			return OverflowRoutine(Op,charpos,first,second);
+			return OverflowRoutine(Op,operatorpos,first,second);
 		case tok_div:
 			if(!check) return Builder.CreateUDiv(first,second,"divtmp");
-			return DivRoutine(Op,charpos,first,second);
+			return DivRoutine(Op, operatorpos,first,second);
 		case tok_mod:
 			if(!check) return Builder.CreateURem(first, second, "modtmp");
-			return ModRoutine(Op,charpos,first,second);
+			return ModRoutine(Op, operatorpos,first,second);
 		case tok_gt:
 			return Builder.CreateICmpUGT(first,second,"gttmp");
 		case tok_gte:
@@ -836,7 +839,6 @@ static int compile() {
 	t = getNextToken();
   }
 
-   cout << "passed 5" <<endl;
 	Builder.CreateRet(RetVal);
 	//BB->llvm::BasicBlock::getTerminator();
 	M->dump();
@@ -847,7 +849,6 @@ static int compile() {
 
 int main(int argc, char **argv) { 
 	if(argc==2){
-		cout << argv[1] << endl;
 		if(!strncmp(argv[1],"-check",6)) check = true;
 		else{
 			cout <<"bad argument!"<< endl;
