@@ -1,3 +1,5 @@
+Denver Hoggatt
+
 The is a writeup that goes through the optimization passes of the llvm optimizer, and briefly explains what each one is doing. The code being compiled by llvm was written in a custom-made language, which can be seen below.
 
 ```
