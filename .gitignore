@@ -27,3 +27,7 @@
 *.exe
 *.out
 *.app
+
+auto-tests-hw8/*.ll
+auto-tests-hw8/*.txt
+build/calcc
