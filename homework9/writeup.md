@@ -1,21 +1,21 @@
 The is a writeup that goes through the optimization passes of the llvm optimizer, and briefly explains what each one is doing. The code being compiled by llvm was written in a custom-made language, which can be seen below.
 
-
+```
 Original Code:
-># ARGS 3 4 8 12
-># RESULT 8
->(if (<= a0 0)
->    0
->    (if (== a0 1)
->        a1
->        (if (== a0 2)
->            (/ (+ a1 a2) 2)
->            (if (== a0 3)
->                (/ (+ a1 (+ a2 a3)) 3)
->                (if (== a0 4)
->                    (/ (+ (+ a1 a2) (+ a3 a4)) 4)
->(/ (+ (+ (+ a1 a2) (+ a3 a4)) a5) 5))))))
-
+ ARGS 3 4 8 12
+ RESULT 8
+(if (<= a0 0)
+    0
+    (if (== a0 1)
+        a1
+        (if (== a0 2)
+            (/ (+ a1 a2) 2)
+            (if (== a0 3)
+                (/ (+ a1 (+ a2 a3)) 3)
+                (if (== a0 4)
+                    (/ (+ (+ a1 a2) (+ a3 a4)) 4)
+(/ (+ (+ (+ a1 a2) (+ a3 a4)) a5) 5))))))
+```
 
 The outputs of the compilation itself were a little long to include in this document, but I will provide relevant examples when I can. The optimization passes are as follows:
 
@@ -36,29 +36,32 @@ From what I can tell, this check doesn't do any optimizations, instead it checks
 From what I can tell this is one of the more popularly called functions during LLVM's optimization. The name itself hints that it is, in some way, trying to simplify the control-flow graph. But what exactly does that mean. Well, let's take a look at the following piece of code:
 
 
->  br i1 %lethan, label %then, label %else
->
->then:                                             ; preds = %entry
->  br label %merge59
->
->else:                                             ; preds = %entry
->  %eq = icmp eq i64 %0, 1
->  br i1 %eq, label %then1, label %else2
+```
+  br i1 %lethan, label %then, label %else
+ 
+then:                                             ; preds = %entry
+  br label %merge59
+ 
+else:                                             ; preds = %entry
+  %eq = icmp eq i64 %0, 1
+  br i1 %eq, label %then1, label %else2
 
+```
 
 This is changed to:
 
 
->  br i1 %lethan, label %merge59, label %else
->
->else:                                             ; preds = %entry
->  switch i64 %0, label %else37 [
->    i64 1, label %merge59
->    i64 2, label %then4
->    i64 3, label %then12
->    i64 4, label %then24
->  ]
+```
+  br i1 %lethan, label %merge59, label %else
 
+else:                                             ; preds = %entry
+  switch i64 %0, label %else37 [
+    i64 1, label %merge59
+    i64 2, label %then4
+    i64 3, label %then12
+    i64 4, label %then24
+  ]
+```
 
 First, we can see that the "then" block was subsumed into the original branch. That is, instead of branching to "then" and then immediately branching to "merge59", the optimizer saw this redundant jump call, and made it so that the original branch just called "merge59", skipping the "then" block entirely.
 
@@ -72,36 +75,39 @@ Second, instead of jumping to an "else" block which made a simple comparison and
 This was another popularly called optimization, and seems to have eliminated quite a bit of code. I don't want to get too in-depth into this function, as it seems to do a lot of different optimizations, but they seem to be united by how the optimizer finds them. Here is an example:
 
 
-> %Mutable0 = alloca i64
-> store i64 0, i64* %Mutable0
-> %Mutable1 = alloca i64
-> store i64 0, i64* %Mutable1
-> %Mutable2 = alloca i64
-> store i64 0, i64* %Mutable2
-> %Mutable3 = alloca i64
-> store i64 0, i64* %Mutable3
-> %Mutable4 = alloca i64
-> store i64 0, i64* %Mutable4
-> %Mutable5 = alloca i64
-> store i64 0, i64* %Mutable5
-> %Mutable6 = alloca i64
-> store i64 0, i64* %Mutable6
-> %Mutable7 = alloca i64
-> store i64 0, i64* %Mutable7
-> %Mutable8 = alloca i64
-> store i64 0, i64* %Mutable8
-> %Mutable9 = alloca i64
-> store i64 0, i64* %Mutable9
-> %lethan = icmp sle i64 %0, 0
-> br i1 %lethan, label %merge59, label %else
-
+```
+ %Mutable0 = alloca i64
+ store i64 0, i64* %Mutable0
+ %Mutable1 = alloca i64
+ store i64 0, i64* %Mutable1
+ %Mutable2 = alloca i64
+ store i64 0, i64* %Mutable2
+ %Mutable3 = alloca i64
+ store i64 0, i64* %Mutable3
+ %Mutable4 = alloca i64
+ store i64 0, i64* %Mutable4
+ %Mutable5 = alloca i64
+ store i64 0, i64* %Mutable5
+ %Mutable6 = alloca i64
+ store i64 0, i64* %Mutable6
+ %Mutable7 = alloca i64
+ store i64 0, i64* %Mutable7
+ %Mutable8 = alloca i64
+ store i64 0, i64* %Mutable8
+ %Mutable9 = alloca i64
+ store i64 0, i64* %Mutable9
+ %lethan = icmp sle i64 %0, 0
+ br i1 %lethan, label 
+ %merge59, label %else
+```
 
 This was changed to:
 
 
->  %lethan = icmp sle i64 %0, 0
->  br i1 %lethan, label %merge59, label %else
-
+```
+  %lethan = icmp sle i64 %0, 0
+  br i1 %lethan, label %merge59, label %else
+```
 
 In our language, we have a hard-coded 9 mutable variables we can use in our program. So these were initialized to zero at the start of our program. Interestingly, the optimizer saw that these variables were never used, and just deleted them. This SROA function is doing optmizations by looking at lines of code nearby to one another. However, instead of scanning through the file and looking at pieces of code spatially nearby to one another, it looks at the control-flow-graph. As soon as it looked at these mutable variables, it saw that they weren't used anywhere else in the file, and it eliminated them.
 
@@ -114,16 +120,18 @@ In our language, we have a hard-coded 9 mutable variables we can use in our prog
 This is a simple call, called a few times throughout the optimization process, which finds and eliminates redundant functions. Here is a simple example:
 
 
->  %5 = insertvalue { i64, i1 } undef, i64 0, 0
->  %6 = insertvalue { i64, i1 } %5, i1 %"or oper2 == 0", 1
->  ret { i64, i1 } %6
-
+```
+  %5 = insertvalue { i64, i1 } undef, i64 0, 0
+  %6 = insertvalue { i64, i1 } %5, i1 %"or oper2 == 0", 1
+  ret { i64, i1 } %6
+```
 
 This was changed to:
 
 
->  ret { i64, i1 } { i64 0, i1 true }
-
+```
+  ret { i64, i1 } { i64 0, i1 true }
+```
 
 As can be seen, it saw that the two insertvalue functions were redundant, combined them, and then inserted them into the return statement.
 
@@ -155,13 +163,14 @@ I believe the main purpose of this pass is simply to protect performance improvi
 Sets certain function attributes. Our language has a built-in overflow checking call, as well as some divide-by-zero checking, and this optimization pass is what identified those calls and brought them into the code:
 
 
->; Function Attrs: nounwind readnone
->declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+```
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
 
->declare i64 @overflow_fail(i64)
+declare i64 @overflow_fail(i64)
 
->define internal { i64, i1 } @sdiv_with_overflow(i64, i64) {
-
+define internal { i64, i1 } @sdiv_with_overflow(i64, i64) {
+```
 
 
 
