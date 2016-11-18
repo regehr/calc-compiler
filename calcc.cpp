@@ -627,11 +627,71 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 //two things should be checked
 //1. div by 0
 //2. LONG_MIN div by -1
+//if arg2 == 0, thenbb0, elsebb0
+//inside elsebb0, if arg2 == -1 && arg1 == MIN64, thenmin, elsemin
 Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
+	//first condition
+	Value *arg2zero = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,0)),"");
 
+	//second condition
+	Value *arg1min = Builder.CreateICmpEQ(arg1,ConstantInt::get(C,APInt::getSignedMinValue(64)), "");
+	Value *arg2neg1 = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,-1)),"");
+	Value *check2 = Builder.CreateAnd(arg1min,arg2neg1,"");
+	
+	Value *trapval = ConstantInt::get(C,APInt(64,-1));// this value does not matter because we exit(-1) before this point
+	
+	//basic blocks
+	Function *f = Builder.GetInsertBlock()->getParent();
+	
+	BasicBlock *thenbb0 = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb0 = BasicBlock::Create(C,"");
+	BasicBlock *finalbb0 = BasicBlock::Create(C,"",f);
+
+	Builder.CreateCondBr(arg2zero,thenbb0,elsebb0);
+	//arg==0 is true
+	Builder.SetInsertPoint(thenbb0);
+	std::vector<Value *> args;
+	args.push_back(ConstantInt::get(C,APInt(64,pos)));
+	Builder.CreateCall(of_error_call,args,""); // call external function
+
+	Builder.CreateBr(finalbb0);
+	thenbb0 = Builder.GetInsertBlock();
+	f->getBasicBlockList().push_back(elsebb0);
+	Builder.SetInsertPoint(elsebb0);
+	// basic blocks for the second condition inside elsebb0
+	BasicBlock *thenbb1 = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb1 = BasicBlock::Create(C,"");
+	BasicBlock *finalbb1 = BasicBlock::Create(C,"",f);
+	
+	Builder.CreateCondBr(check2,thenbb1,elsebb1);
+	Builder.SetInsertPoint(thenbb1);
+	std::vector<Value *>args1;
+	args.push_back(ConstantInt::get(C,APInt(64,pos)));
+	Builder.CreateCall(of_error_call,args,"");
+	
+	//if no problems detected, do the usual division
+	Builder.CreateBr(finalbb1);
+	thenbb1 = Builder.GetInsertBlock();
+	f->getBasicBlockList().push_back(elsebb1);
+	Builder.SetInsertPoint(elsebb1);
+	Value *elsebb1val = Builder.CreateUDiv(arg1,arg2,"");
+	if(!elsebb1val) return nullptr;
+
+	PHINode *phi1 = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+	phi1->addIncoming(trapval,thenbb1);
+	phi1->addIncoming(elsebb1val,elsebb1);
+
+	Builder.CreateBr(finalbb0);
+	elsebb0 = Builder.GetInsertBlock();
+	f->getBasicBlockList().push_back(finalbb0);
+	Builder.SetInsertPoint(finalbb0);
+	PHINode *phi0 = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+	phi0->addIncoming(trapval,thenbb0);
+	phi0->addIncoming(phi1,elsebb0);
+
+	return phi0;
 }
-
 
 
 // modulo check
