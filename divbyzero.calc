@@ -1,0 +1,5 @@
+# CHECK
+# ARGS 0
+# RESULT ERROR
+(/ 100 a0)
+
