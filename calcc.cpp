@@ -18,6 +18,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdint.h>
+#include <stack>
 using namespace llvm;
 using namespace std;
 
@@ -29,6 +30,8 @@ static std::map<std::string, AllocaInst*> MutValues;
 static bool check=false;
 int charpos = -1; // everytime you get new char, increment
 int operatorpos; // charpos of the last operator
+//stack<int> comp; //keeps position numbers of incomplete expressions, pop once complete
+
 // linking external function for overflow situation
 static FunctionType *ft_type = FunctionType::get(Type::getInt64Ty(C), Type::getInt64Ty(C),false);
 static Function *of_error_call = Function::Create(ft_type,Function::ExternalLinkage, "overflow_fail", &*M);
@@ -162,6 +165,7 @@ static int gettok() {
 	if(LastChar=='+'){
 		LastChar = getchar();
 		operatorpos = charpos;
+		//incomp.push(operatorpos);
 		charpos++;
 	   	return tok_add;
 	}
@@ -171,6 +175,7 @@ static int gettok() {
 		if(LastChar==' '){ 
 		   	LastChar = getchar();
 			operatorpos = charpos;
+			//incomp.push(operatorpos);
 			charpos++;
 			return tok_sub;
 		}
@@ -192,18 +197,21 @@ static int gettok() {
 	if(LastChar=='*'){
 		LastChar = getchar();
 		operatorpos = charpos;
+		//incomp.push(operatorpos);
 		charpos++;
 		return tok_mul;
 	}
 	if(LastChar=='/') {
 		LastChar = getchar();
 		operatorpos = charpos;
+		//incomp.push(operatorpos);
 		charpos++;
 		return tok_div;
 	}
 	if(LastChar=='%'){
 		LastChar = getchar();
 		operatorpos = charpos;
+		//incomp.push(operatorpos);
 	  	charpos++;
 	   	return tok_mod;
 	}
@@ -296,12 +304,13 @@ class ConditionConstExprAST : public ExprAST{
 /// BinaryExprAST - Expression class for a binary operator. eg. + 1 1
 class BinaryExprAST : public ExprAST {
   int Op; //hold the token
+  int pos; // position of the corresponding operator
   std::unique_ptr<ExprAST> First, Second;
 
 public:
   BinaryExprAST(int Op, std::unique_ptr<ExprAST> First,
-                std::unique_ptr<ExprAST> Second)
-      : Op(Op), First(std::move(First)), Second(std::move(Second)) {}
+                std::unique_ptr<ExprAST> Second, int pos)
+      : Op(Op), First(std::move(First)), Second(std::move(Second)), pos(pos) {}
   Value *codegen() override;
 };
 
@@ -422,7 +431,7 @@ static std::unique_ptr<ExprAST> ParseBinExpr(){
 	auto second = ParseExpression();
 	if(!second) return LogError("Binary Expression Parsing Error, second operand");
 
-	first = llvm::make_unique<BinaryExprAST>(op,std::move(first),std::move(second));
+	first = llvm::make_unique<BinaryExprAST>(op,std::move(first),std::move(second), operatorpos);
 	return first;
 }
 
@@ -754,6 +763,8 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 //if arg2 == 0, thenbb0, elsebb0
 //inside elsebb0, if arg2 == -1 && arg1 == MIN64, thenmin, elsemin
 Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	//if(opstack.empty()){cout << "empty" << endl;}
+	//opstack.pop();
 
 	//first condition
 	Value *arg2zero = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,0)),"");
@@ -820,6 +831,9 @@ Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
 // modulo check
 Value *ModRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	
+	//opstack.pop();
+
 	//check if arg2 is 0
 	Value *arg2zero = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,0)),"");
 	Function *f = Builder.GetInsertBlock()->getParent();
@@ -871,21 +885,31 @@ Value *BinaryExprAST::codegen() {
 	  return nullptr;
 
 	switch(Op){
-		case tok_add:
+		case tok_add:{
 			if(!check) return Builder.CreateAdd(first, second, "addtmp");
-			return OverflowRoutine(Op, operatorpos, first,second);
-		case tok_sub:
+			return OverflowRoutine(Op, pos, first,second);
+			//return OverflowRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_sub:{
 			if(!check) return Builder.CreateSub(first, second, "subtmp");
-			return OverflowRoutine(Op, operatorpos,first,second);
-		case tok_mul:
+			return OverflowRoutine(Op, pos,first,second);
+			//return OverflowRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_mul:{
 			if(!check) return Builder.CreateMul(first, second, "multmp");
-			return OverflowRoutine(Op,operatorpos,first,second);
-		case tok_div:
+			return OverflowRoutine(Op, pos,first,second);
+			//return OverflowRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_div:{
 			if(!check) return Builder.CreateUDiv(first,second,"divtmp");
-			return DivRoutine(Op, operatorpos,first,second);
-		case tok_mod:
+			return DivRoutine(Op, pos,first,second);
+			//return DivRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_mod:{
 			if(!check) return Builder.CreateURem(first, second, "modtmp");
-			return ModRoutine(Op, operatorpos,first,second);
+			return ModRoutine(Op, pos,first,second);
+			//return ModRoutine(Op, incomp.top(), first,second);
+		}
 		case tok_gt:
 			return Builder.CreateICmpUGT(first,second,"gttmp");
 		case tok_gte:
