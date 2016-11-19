@@ -160,9 +160,9 @@ static int gettok() {
 		return tok_rparan;
 	}
 	if(LastChar=='+'){
-	  LastChar = getchar();
-	  charpos++;
-	  operatorpos = charpos;
+		LastChar = getchar();
+		operatorpos = charpos;
+		charpos++;
 	   	return tok_add;
 	}
 	if(LastChar=='-'){ 
@@ -196,15 +196,15 @@ static int gettok() {
 		return tok_mul;
 	}
 	if(LastChar=='/') {
-	  LastChar = getchar();
-	  operatorpos = charpos;
-	  charpos++;
+		LastChar = getchar();
+		operatorpos = charpos;
+		charpos++;
 		return tok_div;
 	}
 	if(LastChar=='%'){
-	  LastChar = getchar();
-	  operatorpos = charpos;
-	  charpos++;
+		LastChar = getchar();
+		operatorpos = charpos;
+	  	charpos++;
 	   	return tok_mod;
 	}
 	if(LastChar=='>'){
@@ -560,7 +560,131 @@ Value *ArgExprAST::codegen(){
 	return V;
 }
 
-// function to call the overflow intrinsics
+// function to call the overflow add intrinsics
+//
+// switch case increases IR size, can write better code
+Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	Value *res64, *of,*v;
+	Value *intrinsic_args[2] = {arg1,arg2};
+
+	//switch(binOp){
+		if(binOp == tok_add){
+			Function *sadd_f = Intrinsic::getDeclaration(&*M,Intrinsic::sadd_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(sadd_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		else if(binOp == tok_sub){
+			Function *ssub_f = Intrinsic::getDeclaration(&*M,Intrinsic::ssub_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(ssub_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		else{
+			Function *smul_f = Intrinsic::getDeclaration(&*M,Intrinsic::smul_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(smul_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+	//}
+
+	// now generate code for the overflow check
+	Value *of_br = Builder.CreateICmpEQ(of,ConstantInt::get(C,APInt(1,1)),"");
+	Function *f = Builder.GetInsertBlock()->getParent();
+	BasicBlock *thenbb = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb = BasicBlock::Create(C,"");
+	BasicBlock *finalbb = BasicBlock::Create(C,"");
+	
+	APInt ofpos = APInt(64,pos);
+	Builder.CreateCondBr(of_br,thenbb,elsebb);
+
+	Builder.SetInsertPoint(thenbb);
+	std::vector <Value *> args;
+	args.push_back(ConstantInt::get(C,ofpos));
+	Builder.CreateCall(of_error_call,args,"");
+	
+	Builder.CreateBr(finalbb);
+	thenbb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(elsebb);
+	Builder.SetInsertPoint(elsebb);
+	
+	Builder.CreateBr(finalbb);
+	elsebb = Builder.GetInsertBlock();
+	
+	f->getBasicBlockList().push_back(finalbb);
+	Builder.SetInsertPoint(finalbb);
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+
+	phi->addIncoming(res64,thenbb);
+	phi->addIncoming(res64,elsebb);
+
+	return phi;
+}
+
+/*
+//  function to call the subtract  overflow intrinsics
+Value *SubOverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	Value *res64, *of,*v;
+	Value *intrinsic_args[2] = {arg1,arg2};
+
+	switch(binOp){
+		case tok_add:{
+			Function *sadd_f = Intrinsic::getDeclaration(&*M,Intrinsic::sadd_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(sadd_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		case tok_sub:{
+			Function *ssub_f = Intrinsic::getDeclaration(&*M,Intrinsic::ssub_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(ssub_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		case tok_mul: {
+			Function *smul_f = Intrinsic::getDeclaration(&*M,Intrinsic::smul_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(smul_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+	}
+
+	// now generate code for the overflow check
+	Value *of_br = Builder.CreateICmpEQ(of,ConstantInt::get(C,APInt(1,1)),"");
+	Function *f = Builder.GetInsertBlock()->getParent();
+	BasicBlock *thenbb = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb = BasicBlock::Create(C,"");
+	BasicBlock *finalbb = BasicBlock::Create(C,"");
+	
+	APInt ofpos = APInt(64,pos);
+	Builder.CreateCondBr(of_br,thenbb,elsebb);
+
+	Builder.SetInsertPoint(thenbb);
+	std::vector <Value *> args;
+	args.push_back(ConstantInt::get(C,ofpos));
+	Builder.CreateCall(of_error_call,args,"");
+	
+	Builder.CreateBr(finalbb);
+	thenbb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(elsebb);
+	Builder.SetInsertPoint(elsebb);
+	
+	Builder.CreateBr(finalbb);
+	elsebb = Builder.GetInsertBlock();
+	
+	f->getBasicBlockList().push_back(finalbb);
+	Builder.SetInsertPoint(finalbb);
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+
+	phi->addIncoming(res64,thenbb);
+	phi->addIncoming(res64,elsebb);
+
+	return phi;
+}
+*/
+/*
+//  function to call the mul overflow intrinsics
 Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 	Value *res64, *of,*v;
 	Value *intrinsic_args[2] = {arg1,arg2};
@@ -593,9 +717,7 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 	BasicBlock *elsebb = BasicBlock::Create(C,"");
 	BasicBlock *finalbb = BasicBlock::Create(C,"");
 	
-
 	APInt ofpos = APInt(64,pos);
-	
 	Builder.CreateCondBr(of_br,thenbb,elsebb);
 
 	Builder.SetInsertPoint(thenbb);
@@ -603,7 +725,6 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 	args.push_back(ConstantInt::get(C,ofpos));
 	Builder.CreateCall(of_error_call,args,"");
 	
-		
 	Builder.CreateBr(finalbb);
 	thenbb = Builder.GetInsertBlock();
 
@@ -622,6 +743,9 @@ Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
 
 	return phi;
 }
+*/
+
+
 
 //division check
 //two things should be checked
@@ -945,7 +1069,7 @@ static int compile() {
 	//BB->llvm::BasicBlock::getTerminator();
 	M->dump();
 	assert(!verifyModule(*M, &outs()));
-	cout << "num. of chars=" << charpos << endl;
+	//cout << "num. of chars=" << charpos << endl;
   return 0;
 }
 
