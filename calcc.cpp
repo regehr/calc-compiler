@@ -13,10 +13,12 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Intrinsics.h"
 #include <cassert>
 #include <iostream>
 #include <stdio.h>
 #include <stdint.h>
+#include <stack>
 using namespace llvm;
 using namespace std;
 
@@ -26,7 +28,13 @@ static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 static std::map<std::string, Value*> ArgValues;
 static std::map<std::string, AllocaInst*> MutValues;
 static bool check=false;
+int charpos = -1; // everytime you get new char, increment
+int operatorpos; // charpos of the last operator
+//stack<int> comp; //keeps position numbers of incomplete expressions, pop once complete
 
+// linking external function for overflow situation
+static FunctionType *ft_type = FunctionType::get(Type::getInt64Ty(C), Type::getInt64Ty(C),false);
+static Function *of_error_call = Function::Create(ft_type,Function::ExternalLinkage, "overflow_fail", &*M);
 //===----------------------------------------------------------------------===//
 // Lexer
 //===----------------------------------------------------------------------===//
@@ -68,13 +76,12 @@ static std::string match;
 static char LastChar = ' ';
 static int OpenPar = 0; // help identifying parenthesis-less expressions
 
-static bool isLineBegin = false;
-
 static int gettok() {
 
   // Skip any whitespace.
   while (isspace(LastChar)|| LastChar == '\n'|| LastChar == '\t' || LastChar == '\r'){
 	  LastChar = getchar();
+	  charpos++;
   }
   if (LastChar == EOF){
 		//cout << "EOF" << endl;
@@ -84,11 +91,13 @@ static int gettok() {
     // Read until end of line
     do{
       LastChar = getchar();
+	  charpos++;
 	}while ((LastChar != EOF) && (LastChar != '\n') && (LastChar != '\r'));
     if (LastChar == EOF){
       return tok_eof;
 	}
 	LastChar = getchar();
+	charpos++;
 	return tok_comment;
   }
   if (isalpha(LastChar)) {
@@ -96,7 +105,9 @@ static int gettok() {
 
     while (isalnum(LastChar=getchar())){ 
 		IdentifierStr += LastChar;
+		charpos++;
 	}
+	charpos++; //compensate for the last getchar() call
     if (IdentifierStr == "if"){
 		return tok_if;
 	}
@@ -130,6 +141,7 @@ static int gettok() {
     while (isdigit(LastChar)){
       NumStr += LastChar;
       LastChar = getchar();
+	  charpos++;
     } 
     NumVal = strtol(NumStr.c_str(), nullptr,10);
 	if(errno == ERANGE){return tok_intoflow;}
@@ -138,6 +150,7 @@ static int gettok() {
 	if(LastChar=='('){
 	OpenPar++ ;
 	LastChar = getchar();
+	charpos++;
 		if(LastChar == '('){//ouch! back to back left parentheses? 
 			return tok_unknown;
 		}
@@ -146,16 +159,24 @@ static int gettok() {
 	if(LastChar==')'){ 
 		OpenPar-- ;
 		LastChar = getchar();
+		charpos++;
 		return tok_rparan;
 	}
 	if(LastChar=='+'){
-	  LastChar = getchar();
+		LastChar = getchar();
+		operatorpos = charpos;
+		//incomp.push(operatorpos);
+		charpos++;
 	   	return tok_add;
 	}
 	if(LastChar=='-'){ 
 		LastChar= getchar();
+		charpos++;
 		if(LastChar==' '){ 
 		   	LastChar = getchar();
+			operatorpos = charpos;
+			//incomp.push(operatorpos);
+			charpos++;
 			return tok_sub;
 		}
 		else if(isdigit(LastChar)){
@@ -164,7 +185,9 @@ static int gettok() {
 			neg+=LastChar;
 			while(isdigit(LastChar=getchar())){
 				neg+= LastChar;
+				charpos++;
 			}
+			charpos++; // compensate for the last getchar() call
 			NumVal = strtol(neg.c_str(),nullptr,10);
 			if(errno == ERANGE){return tok_intoflow;}
 	  
@@ -172,47 +195,66 @@ static int gettok() {
 		}
 	}
 	if(LastChar=='*'){
-	  LastChar = getchar();
+		LastChar = getchar();
+		operatorpos = charpos;
+		//incomp.push(operatorpos);
+		charpos++;
 		return tok_mul;
 	}
 	if(LastChar=='/') {
-	  LastChar = getchar();
+		LastChar = getchar();
+		operatorpos = charpos;
+		//incomp.push(operatorpos);
+		charpos++;
 		return tok_div;
 	}
 	if(LastChar=='%'){
-	  LastChar = getchar();
+		LastChar = getchar();
+		operatorpos = charpos;
+		//incomp.push(operatorpos);
+	  	charpos++;
 	   	return tok_mod;
 	}
 	if(LastChar=='>'){
 		LastChar=getchar();
+		charpos++;
 		if(LastChar=='='){
 			LastChar = getchar();
+			charpos++;
 		   	return tok_gte;
 		}
 		LastChar = getchar();
+		charpos++;
 		return tok_gt;
 	}
 	if(LastChar=='<'){ 
 		LastChar=getchar();
+		charpos++;
 		if(LastChar=='='){
 			LastChar = getchar();
+			charpos++;
 			return tok_lte;
 		}
 		LastChar = getchar();
+		charpos++;
 		return tok_lt;
 	}
 	if(LastChar=='='){
 		LastChar=getchar();
+		charpos++;
 		if(LastChar=='='){
 		   	LastChar = getchar();
+			charpos++;
 			return tok_eq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
 	}
 	if(LastChar == '!'){
 		LastChar = getchar();
+		charpos++;
 		if(LastChar == '='){
 			LastChar = getchar();
+			charpos++;
 			return tok_neq;
 		}
 		cout << "SCANNER ERROR NEAR =" << endl;
@@ -262,12 +304,13 @@ class ConditionConstExprAST : public ExprAST{
 /// BinaryExprAST - Expression class for a binary operator. eg. + 1 1
 class BinaryExprAST : public ExprAST {
   int Op; //hold the token
+  int pos; // position of the corresponding operator
   std::unique_ptr<ExprAST> First, Second;
 
 public:
   BinaryExprAST(int Op, std::unique_ptr<ExprAST> First,
-                std::unique_ptr<ExprAST> Second)
-      : Op(Op), First(std::move(First)), Second(std::move(Second)) {}
+                std::unique_ptr<ExprAST> Second, int pos)
+      : Op(Op), First(std::move(First)), Second(std::move(Second)), pos(pos) {}
   Value *codegen() override;
 };
 
@@ -388,7 +431,7 @@ static std::unique_ptr<ExprAST> ParseBinExpr(){
 	auto second = ParseExpression();
 	if(!second) return LogError("Binary Expression Parsing Error, second operand");
 
-	first = llvm::make_unique<BinaryExprAST>(op,std::move(first),std::move(second));
+	first = llvm::make_unique<BinaryExprAST>(op,std::move(first),std::move(second), operatorpos);
 	return first;
 }
 
@@ -526,6 +569,190 @@ Value *ArgExprAST::codegen(){
 	return V;
 }
 
+// function to call the overflow add intrinsics
+//
+// switch case increases IR size, can write better code
+Value *OverflowRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	Value *res64, *of,*v;
+	Value *intrinsic_args[2] = {arg1,arg2};
+
+	//switch(binOp){
+		if(binOp == tok_add){
+			Function *sadd_f = Intrinsic::getDeclaration(&*M,Intrinsic::sadd_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(sadd_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		else if(binOp == tok_sub){
+			Function *ssub_f = Intrinsic::getDeclaration(&*M,Intrinsic::ssub_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(ssub_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+		else{
+			Function *smul_f = Intrinsic::getDeclaration(&*M,Intrinsic::smul_with_overflow, ArrayRef<Type *>(Type::getInt64Ty(C)));
+			v = Builder.CreateCall(smul_f, ArrayRef<Value *>(intrinsic_args,2));
+			res64 = Builder.CreateExtractValue(v,ArrayRef<unsigned>(0));
+			of = Builder.CreateExtractValue(v, ArrayRef<unsigned>(1));
+		}
+	//}
+
+	// now generate code for the overflow check
+	Value *of_br = Builder.CreateICmpEQ(of,ConstantInt::get(C,APInt(1,1)),"");
+	Function *f = Builder.GetInsertBlock()->getParent();
+	BasicBlock *thenbb = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb = BasicBlock::Create(C,"");
+	BasicBlock *finalbb = BasicBlock::Create(C,"");
+	
+	APInt ofpos = APInt(64,pos);
+	Builder.CreateCondBr(of_br,thenbb,elsebb);
+
+	Builder.SetInsertPoint(thenbb);
+	std::vector <Value *> args;
+	args.push_back(ConstantInt::get(C,ofpos));
+	Builder.CreateCall(of_error_call,args,"");
+	
+	Builder.CreateBr(finalbb);
+	thenbb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(elsebb);
+	Builder.SetInsertPoint(elsebb);
+	
+	Builder.CreateBr(finalbb);
+	elsebb = Builder.GetInsertBlock();
+	
+	f->getBasicBlockList().push_back(finalbb);
+	Builder.SetInsertPoint(finalbb);
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+
+	phi->addIncoming(res64,thenbb);
+	phi->addIncoming(res64,elsebb);
+
+	return phi;
+}
+
+//division check
+//two things should be checked
+//1. div by 0
+//2. LONG_MIN div by -1
+//if arg2 == 0, thenbb0, elsebb0
+//inside elsebb0, if arg2 == -1 && arg1 == MIN64, thenmin, elsemin
+Value *DivRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	//if(opstack.empty()){cout << "empty" << endl;}
+	//opstack.pop();
+
+	//first condition
+	Value *arg2zero = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,0)),"");
+
+	//second condition
+	Value *arg1min = Builder.CreateICmpEQ(arg1,ConstantInt::get(C,APInt::getSignedMinValue(64)), "");
+	Value *arg2neg1 = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,-1)),"");
+	Value *check2 = Builder.CreateAnd(arg1min,arg2neg1,"");
+	
+	Value *trapval = ConstantInt::get(C,APInt(64,-1));// this value does not matter because we exit(-1) before this point
+	
+	//basic blocks
+	Function *f = Builder.GetInsertBlock()->getParent();
+	
+	BasicBlock *thenbb0 = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb0 = BasicBlock::Create(C,"");
+	BasicBlock *finalbb0 = BasicBlock::Create(C,"",f);
+
+	Builder.CreateCondBr(arg2zero,thenbb0,elsebb0);
+	//arg==0 is true
+	Builder.SetInsertPoint(thenbb0);
+	std::vector<Value *> args;
+	args.push_back(ConstantInt::get(C,APInt(64,pos)));
+	Builder.CreateCall(of_error_call,args,""); // call external function
+
+	Builder.CreateBr(finalbb0);
+	thenbb0 = Builder.GetInsertBlock();
+	f->getBasicBlockList().push_back(elsebb0);
+	Builder.SetInsertPoint(elsebb0);
+	// basic blocks for the second condition inside elsebb0
+	BasicBlock *thenbb1 = BasicBlock::Create(C,"",f);
+	BasicBlock *elsebb1 = BasicBlock::Create(C,"");
+	BasicBlock *finalbb1 = BasicBlock::Create(C,"",f);
+	
+	Builder.CreateCondBr(check2,thenbb1,elsebb1);
+	Builder.SetInsertPoint(thenbb1);
+	std::vector<Value *>args1;
+	args.push_back(ConstantInt::get(C,APInt(64,pos)));
+	Builder.CreateCall(of_error_call,args,"");
+	
+	//if no problems detected, do the usual division
+	Builder.CreateBr(finalbb1);
+	thenbb1 = Builder.GetInsertBlock();
+	f->getBasicBlockList().push_back(elsebb1);
+	Builder.SetInsertPoint(elsebb1);
+	Value *elsebb1val = Builder.CreateUDiv(arg1,arg2,"");
+	if(!elsebb1val) return nullptr;
+
+	PHINode *phi1 = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+	phi1->addIncoming(trapval,thenbb1);
+	phi1->addIncoming(elsebb1val,elsebb1);
+
+	Builder.CreateBr(finalbb0);
+	elsebb0 = Builder.GetInsertBlock();
+	f->getBasicBlockList().push_back(finalbb0);
+	Builder.SetInsertPoint(finalbb0);
+	PHINode *phi0 = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+	phi0->addIncoming(trapval,thenbb0);
+	phi0->addIncoming(phi1,elsebb0);
+
+	return phi0;
+}
+
+
+// modulo check
+Value *ModRoutine(int binOp,int pos, Value *arg1, Value *arg2){
+	
+	//opstack.pop();
+
+	//check if arg2 is 0
+	Value *arg2zero = Builder.CreateICmpEQ(arg2, ConstantInt::get(C,APInt(64,0)),"");
+	Function *f = Builder.GetInsertBlock()->getParent();
+
+	//if-then-else codegen
+	BasicBlock *thenbb = BasicBlock::Create(C, "", f);
+	BasicBlock *elsebb = BasicBlock::Create(C, "");
+	BasicBlock *finalbb = BasicBlock::Create(C, "");
+
+	Builder.CreateCondBr(arg2zero, thenbb, elsebb);
+
+	Builder.SetInsertPoint(thenbb);
+	APInt modZeroPos = APInt(64,pos);
+	std::vector<Value *> args;
+	args.push_back(ConstantInt::get(C,modZeroPos));
+	Builder.CreateCall(of_error_call, args, ""); // call external function
+
+	//return this value if mod 0
+	Value *trapVal = ConstantInt::get(C,APInt(64,-1));// the return value of thenbb does not matter because 'trap' kill the program with exit(-1) before the execution raaches this point
+
+	Builder.CreateBr(finalbb);
+	thenbb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(elsebb);
+	Builder.SetInsertPoint(elsebb);
+
+	Value *noTrapVal = Builder.CreateURem(arg1,arg2,"modtmp");// do the mod as usual
+	if(!noTrapVal) return nullptr;
+
+	Builder.CreateBr(finalbb);
+
+	elsebb = Builder.GetInsertBlock();
+
+	f->getBasicBlockList().push_back(finalbb);
+	Builder.SetInsertPoint(finalbb);
+
+	PHINode *phi = Builder.CreatePHI(Type::getInt64Ty(C),2,"");
+
+	phi->addIncoming(trapVal,thenbb);
+	phi->addIncoming(noTrapVal,elsebb);
+
+	return phi;
+}
+
 Value *BinaryExprAST::codegen() {
   Value *first = First->codegen();
   Value *second = Second->codegen();
@@ -533,16 +760,31 @@ Value *BinaryExprAST::codegen() {
 	  return nullptr;
 
 	switch(Op){
-		case tok_add:
-			return Builder.CreateAdd(first, second, "addtmp");
-		case tok_sub:
-			return Builder.CreateSub(first, second, "subtmp");
-		case tok_mul:
-			return Builder.CreateMul(first, second, "multmp");
-		case tok_div:
-			return Builder.CreateUDiv(first,second,"divtmp");
-		case tok_mod:
-			return Builder.CreateURem(first, second, "modtmp");
+		case tok_add:{
+			if(!check) return Builder.CreateAdd(first, second, "addtmp");
+			return OverflowRoutine(Op, pos, first,second);
+			//return OverflowRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_sub:{
+			if(!check) return Builder.CreateSub(first, second, "subtmp");
+			return OverflowRoutine(Op, pos,first,second);
+			//return OverflowRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_mul:{
+			if(!check) return Builder.CreateMul(first, second, "multmp");
+			return OverflowRoutine(Op, pos,first,second);
+			//return OverflowRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_div:{
+			if(!check) return Builder.CreateUDiv(first,second,"divtmp");
+			return DivRoutine(Op, pos,first,second);
+			//return DivRoutine(Op, incomp.top(), first,second);
+		}
+		case tok_mod:{
+			if(!check) return Builder.CreateURem(first, second, "modtmp");
+			return ModRoutine(Op, pos,first,second);
+			//return ModRoutine(Op, incomp.top(), first,second);
+		}
 		case tok_gt:
 			return Builder.CreateICmpUGT(first,second,"gttmp");
 		case tok_gte:
@@ -722,18 +964,17 @@ static int compile() {
 	t = getNextToken();
   }
 
-   cout << "passed 5" <<endl;
 	Builder.CreateRet(RetVal);
 	//BB->llvm::BasicBlock::getTerminator();
 	M->dump();
 	assert(!verifyModule(*M, &outs()));
-
+	//cout << "num. of chars=" << charpos << endl;
   return 0;
 }
 
 int main(int argc, char **argv) { 
 	if(argc==2){
-		if(argv[1] == "-check") check = true;
+		if(!strncmp(argv[1],"-check",6)) check = true;
 		else{
 			cout <<"bad argument!"<< endl;
 			exit(1);
