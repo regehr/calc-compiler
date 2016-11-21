@@ -1,0 +1,2602 @@
+*** IR Dump After Module Verifier ***
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %6 = alloca i64
+  store i64 0, i64* %6
+  %7 = alloca i64
+  store i64 0, i64* %7
+  %8 = alloca i64
+  store i64 0, i64* %8
+  %9 = alloca i64
+  store i64 0, i64* %9
+  %10 = alloca i64
+  store i64 0, i64* %10
+  %11 = alloca i64
+  store i64 0, i64* %11
+  %12 = alloca i64
+  store i64 0, i64* %12
+  %13 = alloca i64
+  store i64 0, i64* %13
+  %14 = alloca i64
+  store i64 0, i64* %14
+  %15 = alloca i64
+  store i64 0, i64* %15
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  br i1 %">1", label %true2, label %false
+
+true2:                                            ; preds = %true
+  br label %merge
+
+false:                                            ; preds = %true
+  br label %merge
+
+merge:                                            ; preds = %false, %true2
+  %ifret = phi i64 [ 3, %true2 ], [ 5, %false ]
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %ifret, i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %noerror
+
+error:                                            ; preds = %merge
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+noerror:                                          ; preds = %merge
+  br label %merge6
+
+false3:                                           ; preds = %entry
+  %19 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %20 = extractvalue { i64, i1 } %19, 1
+  %21 = extractvalue { i64, i1 } %19, 0
+  br i1 %20, label %error4, label %noerror5
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+noerror5:                                         ; preds = %false3
+  br label %merge6
+
+merge6:                                           ; preds = %noerror5, %noerror
+  %ifret7 = phi i64 [ %18, %noerror ], [ %21, %noerror5 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %6 = alloca i64
+  store i64 0, i64* %6
+  %7 = alloca i64
+  store i64 0, i64* %7
+  %8 = alloca i64
+  store i64 0, i64* %8
+  %9 = alloca i64
+  store i64 0, i64* %9
+  %10 = alloca i64
+  store i64 0, i64* %10
+  %11 = alloca i64
+  store i64 0, i64* %11
+  %12 = alloca i64
+  store i64 0, i64* %12
+  %13 = alloca i64
+  store i64 0, i64* %13
+  %14 = alloca i64
+  store i64 0, i64* %14
+  %15 = alloca i64
+  store i64 0, i64* %15
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  %. = select i1 %">1", i64 3, i64 5
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %., i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %19 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %20 = extractvalue { i64, i1 } %19, 1
+  %21 = extractvalue { i64, i1 } %19, 0
+  br i1 %20, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %18, %true ], [ %21, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After SROA ***
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  %. = select i1 %">1", i64 3, i64 5
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %., i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Early CSE ***
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Lower 'expect' Intrinsics ***
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Force set function attributes ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64)
+
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Infer set function attributes ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64)
+
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Interprocedural Sparse Conditional Constant Propagation ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64)
+
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Global Variable Optimizer ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Promote Memory to Register ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Dead Argument Elimination ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After PGOIndirectCallPromotion ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Remove unused exception handling info ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+*** IR Dump After Function Integration/Inlining ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+*** IR Dump After Deduce function attributes ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+*** IR Dump After Remove unused exception handling info ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+*** IR Dump After Function Integration/Inlining ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+*** IR Dump After Deduce function attributes ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+*** IR Dump After Remove unused exception handling info ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+*** IR Dump After Function Integration/Inlining ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+*** IR Dump After Deduce function attributes ***
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+*** IR Dump After Remove unused exception handling info ***
+Printing <null> Function
+*** IR Dump After Function Integration/Inlining ***
+Printing <null> Function
+*** IR Dump After Deduce function attributes ***
+Printing <null> Function
+*** IR Dump After Remove unused exception handling info ***
+declare void @overflow_fail(i64) local_unnamed_addr
+*** IR Dump After Function Integration/Inlining ***
+declare void @overflow_fail(i64) local_unnamed_addr
+*** IR Dump After Deduce function attributes ***
+declare void @overflow_fail(i64) local_unnamed_addr
+*** IR Dump After Remove unused exception handling info ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Function Integration/Inlining ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Deduce function attributes ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After SROA ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Early CSE ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Speculatively execute instructions if target has divergent branches ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Jump Threading ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Value Propagation ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Tail Call Elimination ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Reassociate expressions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After MergedLoadStoreMotion ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Global Value Numbering ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After MemCpy Optimization ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Sparse Conditional Constant Propagation ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Demanded bits analysis ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Bit-Tracking Dead Code Elimination ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Jump Threading ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Value Propagation ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Dead Store Elimination ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Aggressive Dead Code Elimination ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Remove unused exception handling info ***
+Printing <null> Function
+*** IR Dump After Function Integration/Inlining ***
+Printing <null> Function
+*** IR Dump After Deduce function attributes ***
+Printing <null> Function
+*** IR Dump After A No-Op Barrier Pass ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Eliminate Available Externally Globals ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Deduce function attributes in RPO ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Float to int ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop Distribition ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Demanded bits analysis ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop Vectorization ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop Load Elimination ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Demanded bits analysis ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After SLP Vectorizer ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Simplify the CFG ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Combine redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Canonicalize natural loops ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Loop-Closed SSA Form Pass ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Remove redundant instructions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Alignment from assumptions ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+*** IR Dump After Strip Unused Function Prototypes ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Dead Global Elimination ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Merge Duplicate Global Constants ***; ModuleID = '../output-william/jdr29.ll'
+source_filename = "calc"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #0
+
+; Function Attrs: nounwind readnone
+declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64) #0
+
+declare void @overflow_fail(i64) local_unnamed_addr
+
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+
+attributes #0 = { nounwind readnone }
+*** IR Dump After Module Verifier ***
+define i64 @f(i64, i64, i64, i64, i64, i64) local_unnamed_addr {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = tail call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %2, i64 5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  tail call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = tail call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  tail call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+BC¿ﬁ5     b0$IYæÊÌ˜~-D2    !  ˚   Ç        Å#ëA»I29íÑ%ãbÄEBíBÑ28K
+2BàHê CFà• 2B‰Hê"ƒPAQÅå·ÉÂä!FQ     å‡ˇˇˇˇ@( I     Ç  â      2"	 dÖ"§Ñ"„Ñ°êLàåÑÑL0s†0G¢@3PÑ≤r    ·@¿   0|¿;¯;†É6®wXwxá{pá6`átpáz¿á68w®á!œ @        CûÄ        Ü<    Ä    y         –aHB AbÉ@Qv  ÄX\   3Äƒ·f=àC8Ñ√åBÄyxsòqÊ ÌÙÄ3B¬¡Œ°f0=àC8ÑÉÃ=»C=å=Ãxåtp{yHáppzpvxáp áÃÏê·0n0„P3ƒﬁ!ÿ!¬af0â;ºÉ;–C9¥<ºÉ<Ñ;Ãv`{h7hárh7Äápêáp`v(v¯vxáwÄá_áqáròáyòÅ,ÓÓ‡ı¿Ï0b»°‰°Ã°‰°‹a !ƒÅ a÷êC9»C9òC9»C9∏√8îC8à;î√/ºÉ<¸Ç;‘;∞√«iápXárpÉthx`átát†áŒSÓ ÚP‰ê„@· ÏP3 (‹¡¬A“!‹Å‹‡‰·ÍfQ8∞C:úÉ;ÃP$v`{h7`áwxxòQLÙêP  ©     
+r(áwÄzXpòC=∏√8∞C9–√ÇÊ∆°ËA¬¡Ê!Ë!ﬁ¡ a   ,   F,      •Pä# •   √áa≥¡å@Ç¡$≈hBå&¿,ÉP#Ç``@G#Ç`0DJ2ö£	0À@¬àAÑ í…@Ä¬êA8   @LE‹ÄQ ãD‹W`0Dd˙	D9ëUH”~ —LvENÑóC‡!1     Ü `        q      R"dÇ§ D»‰H9@àê°åÑ¿∂,„K¿0¯2æSQ±8ñèË∏¯ÖlÀR1æƒPão!”·;ãc˘àéõ@„TDT,éı ≤        

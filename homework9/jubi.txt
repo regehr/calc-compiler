@@ -1,0 +1,405 @@
+For program jdr29.calc written in calc language, we compile it to generate
+the LLVM IR as shown in jdr29.ll
+
+jdr29.ll file: https://github.com/regehr/calc-compiler/blob/master/output-william/jdr29.ll
+
+============================================================
+Pass #0:  Source program in calc language
+Link: https://github.com/regehr/calc-compiler/blob/master/auto-tests-hw8/jdr29.calc
+============================================================
+# ARGS 1 10 100 1000 10000 100000
+# RESULT 1000000000
+
+(if (> a3 a4) (+ (if (> 1 2) 3 5) a2) (* a4 a5))
+
+We run the optimizer to print all optimization passes output
+to analyze how the LLVM IR gets simplified with each optimization
+pass. 
+============================================================
+Pass #1: IR Dump After Module Verifier
+============================================================
+
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %6 = alloca i64
+  store i64 0, i64* %6
+  %7 = alloca i64
+  store i64 0, i64* %7
+  %8 = alloca i64
+  store i64 0, i64* %8
+  %9 = alloca i64
+  store i64 0, i64* %9
+  %10 = alloca i64
+  store i64 0, i64* %10
+  %11 = alloca i64
+  store i64 0, i64* %11
+  %12 = alloca i64
+  store i64 0, i64* %12
+  %13 = alloca i64
+  store i64 0, i64* %13
+  %14 = alloca i64
+  store i64 0, i64* %14
+  %15 = alloca i64
+  store i64 0, i64* %15
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  br i1 %">1", label %true2, label %false
+
+true2:                                            ; preds = %true
+  br label %merge
+
+false:                                            ; preds = %true
+  br label %merge
+
+merge:                                            ; preds = %false, %true2
+  %ifret = phi i64 [ 3, %true2 ], [ 5, %false ]
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %ifret, i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %noerror
+
+error:                                            ; preds = %merge
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+noerror:                                          ; preds = %merge
+  br label %merge6
+
+false3:                                           ; preds = %entry
+  %19 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %20 = extractvalue { i64, i1 } %19, 1
+  %21 = extractvalue { i64, i1 } %19, 0
+  br i1 %20, label %error4, label %noerror5
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+noerror5:                                         ; preds = %false3
+  br label %merge6
+
+merge6:                                           ; preds = %noerror5, %noerror
+  %ifret7 = phi i64 [ %18, %noerror ], [ %21, %noerror5 ]
+  ret i64 %ifret7
+}
+
+In the above LLVM IR after module verifier, we see the alloca and store
+instructions (%5 to %15) which corresponds to load and store of mutable
+variables [m0-m9] as defined in calc language. The arguments [a0-a5] correspond
+to %0-%5.
+
+The LLVM IR on left corresponds to simplified calc code on right side. The label wil be
+expanded further as we navigate further code segments.
+
+  %">" = icmp sgt i64 %3, %4              |   (if (> a3 a4)
+  br i1 %">", label %true, label %false3  |       label %true
+                                          |       label %false3)
+
+If the condition is true i.e. a3 is signed greater than a4, then it jumps to the 
+true block and the code segment is as shown below.
+
+true:                                     |   (if (> 1 2)
+  %">1" = icmp sgt i64 1, 2               |       label %true2
+  br i1 %">1", label %true2, label %false |       label %false)
+
+Here, we compare if 1 is greater than 2, we jump to label %true2, otherwise we jump to label %false.
+We know that 1 is obviously not greater than 2, we expect to at least see this optimization further.
+Also, we expect to get rid of the true2 block completely, because 1>2 is never going to be true.
+
+The true and false branch of %true block merges into phi node in %merge block as shown below.
+
+merge:                                            ; preds = %false, %true2
+  %ifret = phi i64 [ 3, %true2 ], [ 5, %false ]
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %ifret, i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %noerror
+
+The phi instruction's (%ifret) operands show that %ifret is set to value  3, if true branch is taken,
+otherwise %ifret is set to value 5 when false branch is taken.
+
+The calc code: (+ (if (> 1 2) 3 5) a2) is equivalent to (+ %ifret a2) which is shown by add with
+overflow instruction (%16). The following extract value instructions extract the 64-bit sum and 1-bit
+overflow bit computed by add with overflow instruction. If the overflow bit is 1 as extracted in %17,
+the overflow error occurs. Otherwise, it returns the sum of argument a2 and 1.
+
+In the above discussion, so far we have looked at the true path taken after comparing z3>a4.
+
+  (if (> a3 a4) (+ (if (> 1 2) 3 5) a2) (* a4 a5))
+
+The false path multiplies argument a4 with a5, i.e. (* a4 a5) as shown in %false3 block. The multiplication
+with overflow instruction (%19) is followed by extract value instructions to extract the 64-bit and 1-bit overflow
+result. If the overflow bit is 1 (instruction %20), i.e. overflow occur which leads to an error. Otherwise,
+the 64-bit result of a4 * a5, is returned.
+
+false3:                                           ; preds = %entry
+  %19 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %20 = extractvalue { i64, i1 } %19, 1
+  %21 = extractvalue { i64, i1 } %19, 0
+  br i1 %20, label %error4, label %noerror5
+
+The true and false branches taken from entry block merge into a phi node as shown in block %merge6.
+The true branch, computes the addition with overflow (a2 + 1) and the false branch computes 
+multiplication with overflow (a4 * a5).
+
+merge6:                                                     |
+  %ifret7 = phi i64 [ %18, %noerror ], [ %21, %noerror5 ]   | %ifret7 = phi [a2+1], [a4*a5]
+  ret i64 %ifret7                                           |
+
+============================================================
+Pass #2:  IR Dump After Simplify the CFG 
+============================================================
+
+This optimization pass simplifies the control flow graph. 
+
+- simplifies the (if (> 1 2) 3 5) BB's which were spread out on 3-BB's into 1 with select inst directly.
+
+The below IR gets simplified:
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  br i1 %">1", label %true2, label %false
+
+true2:                                            ; preds = %true
+  br label %merge
+
+false:                                            ; preds = %true
+  br label %merge
+
+merge:                                            ; preds = %false, %true2
+  %ifret = phi i64 [ 3, %true2 ], [ 5, %false ]
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %ifret, i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %noerror
+
+
+into the following simpler IR form as shown below.
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  %. = select i1 %">1", i64 3, i64 5
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %., i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %merge6
+
+
+*** Earlier the branch inst in %merge BB, branched to %error BB and %noerror BB.
+The %noerror BB branches to %merge6 BB. The %noerror BB was just a redundant block.
+The simplify CFG pass removes this extra BB and adds the control flow path from
+branch instruction in %merge BB to %merge6 BB directly as shown below.
+
+The IR shown below,
+
+merge:
+  ...
+  br i1 %17, label %error, label %noerror
+
+error:                                            ; preds = %merge
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+noerror:                                          ; preds = %merge
+  br label %merge6
+
+gets simplified to IR as shown below.
+
+merge:
+  ...
+  br i1 %17, label %error, label %merge6
+
+These are the only two simplifications done by simplifying CFG so far. The next optimization passes that
+we will analyze are more relevant.
+
+For reference, the IR dump after this pass is as shown below.
+-------------------------------------------------------------
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %6 = alloca i64
+  store i64 0, i64* %6
+  %7 = alloca i64
+  store i64 0, i64* %7
+  %8 = alloca i64
+  store i64 0, i64* %8
+  %9 = alloca i64
+  store i64 0, i64* %9
+  %10 = alloca i64
+  store i64 0, i64* %10
+  %11 = alloca i64
+  store i64 0, i64* %11
+  %12 = alloca i64
+  store i64 0, i64* %12
+  %13 = alloca i64
+  store i64 0, i64* %13
+  %14 = alloca i64
+  store i64 0, i64* %14
+  %15 = alloca i64
+  store i64 0, i64* %15
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  %. = select i1 %">1", i64 3, i64 5
+  %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %., i64 %2)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  br i1 %17, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %19 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %20 = extractvalue { i64, i1 } %19, 1
+  %21 = extractvalue { i64, i1 } %19, 0
+  br i1 %20, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %18, %true ], [ %21, %false3 ]
+  ret i64 %ifret7
+}
+-------------------------------------------------------------
+
+============================================================
+Pass #3: IR Dump After SROA
+============================================================
+Scalar replacement of aggregates breaks the structures into scalar values. This pass gives us
+the real SSA form. SROA pass assign each component of an aggregate to a temporary variable and
+this allows the optimizations to be applied to individual components. [Ref: 1]
+
+The IR dump after SROA is as shown below.
+-------------------------------------------------------------
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  %. = select i1 %">1", i64 3, i64 5
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %., i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+-------------------------------------------------------------
+
+After SROA, we no longer have any load/store instructions. The CFG remains the same.
+The only aggregates are results of overflow instructions as shown by instruction: %6, %9.
+However, the components of this instrction were already extracted in previous passes
+by using extractvalue instruction. We don't need to get any more individual components
+in this pass.
+
+============================================================
+Pass #4: IR Dump After Early CSE
+============================================================
+
+In this pass, we simplify one expression of comparing (> 1 2) as shown by IR below.
+
+true:                                             ; preds = %entry
+  %">1" = icmp sgt i64 1, 2
+  %. = select i1 %">1", i64 3, i64 5
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %., i64 %2)
+  ...
+
+We mentioned this in our dicussion of Pass #1 that we expect to see this comparison
+operation gets simplified to always return false for comparing 1>2 and hence,
+the select instruction %".", will always return the value 5.
+
+The IR now gets simplified to as shown below.
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  ...
+
+In the above add with overflow instruction, %6, the first operand is
+i64 constant with value 5 and the second operand is result of instruction
+%2.
+
+The IR dump after this pass is as shown below.
+-------------------------------------------------------------
+define i64 @f(i64, i64, i64, i64, i64, i64) {
+entry:
+  %">" = icmp sgt i64 %3, %4
+  br i1 %">", label %true, label %false3
+
+true:                                             ; preds = %entry
+  %6 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 5, i64 %2)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  br i1 %7, label %error, label %merge6
+
+error:                                            ; preds = %true
+  call void @overflow_fail(i64 69)
+  ret i64 0
+
+false3:                                           ; preds = %entry
+  %9 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %4, i64 %5)
+  %10 = extractvalue { i64, i1 } %9, 1
+  %11 = extractvalue { i64, i1 } %9, 0
+  br i1 %10, label %error4, label %merge6
+
+error4:                                           ; preds = %false3
+  call void @overflow_fail(i64 93)
+  ret i64 0
+
+merge6:                                           ; preds = %false3, %true
+  %ifret7 = phi i64 [ %8, %true ], [ %11, %false3 ]
+  ret i64 %ifret7
+}
+-------------------------------------------------------------
+
+============================================================
+Pass #5:  Lower 'expect' Intrinsics
+============================================================
+
+This pass deals with intrinsics, like sadd.with.overflow, smul.with.overflow
+in our example. However, there is nothing that can be further simplified for
+these intrinsics. This pass doesn't modif the IR dump at all.
+
+============================================================
+Pass #6:  Force set function attributes
+============================================================
+This pass is required mainly for debugging the function attributes. We don't
+see any optimizations for our example, so we skip this pass details.
+
+Each set of optimization passes are invoked multiple times to make the IR
+as optimal as possible. For instance, here I observed that each optimization pass
+is invoked seven times. Further passes don't perform any new optimization. 
+For IR dumps of each pass, please see the file at: calc-compiler/homework9/jubi/passes.txt
+
+So, the final optimized IR is at:calc-compiler/homework9/jubi/optimized.ll
+
+============================================================
+References
+============================================================
+
+[1] SROA: http://digital.cs.usu.edu/~allan/AdvComp/Notes/earlyd/
