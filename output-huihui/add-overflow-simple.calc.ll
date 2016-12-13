@@ -35,9 +35,17 @@ entry:
   store i64 0, i64* %m8
   %m9 = alloca i64
   store i64 0, i64* %m9
-  store i64 1, i64* %m0
-  %0 = load i64, i64* %m0
-  ret i64 %0
+  %0 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 -9223372036854775808, i64 1)
+  %1 = extractvalue { i64, i1 } %0, 0
+  %2 = extractvalue { i64, i1 } %0, 1
+  br i1 %2, label %then, label %else
+
+then:                                             ; preds = %entry
+  %callTrap = call i64 @overflow_fail(i64 19)
+  br label %else
+
+else:                                             ; preds = %then, %entry
+  ret i64 %1
 }
 
 attributes #0 = { nounwind readnone }
